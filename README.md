@@ -1,4 +1,4 @@
-# Twist
+# Pally
 
 A front-end-only currency search and mental conversion assistant. Twist fetches current reference rates from the free [Frankfurter API](https://frankfurter.dev/) and ranks short chains of easy arithmetic operations to approximate each exchange rate.
 

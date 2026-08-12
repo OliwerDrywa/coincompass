@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { findMentalMethods, formatStep } from './conversion.js'
+import { findMentalMethods, formatStep, normalizeAmountInput, selectFeaturedMethods } from './conversion.js'
 import './style.css'
 
 const FALLBACK_CURRENCIES = {
@@ -12,92 +12,74 @@ const FALLBACK_CURRENCIES = {
   PHP: 'Philippine Peso', PLN: 'Polish Złoty', RON: 'Romanian Leu', SEK: 'Swedish Krona',
   SGD: 'Singapore Dollar', THB: 'Thai Baht', TRY: 'Turkish Lira', USD: 'United States Dollar', ZAR: 'South African Rand',
 }
-
+const PAIR_KEY = 'pally-last-currency-pair'
 const SYMBOLS = { EUR: '€', USD: '$', GBP: '£', JPY: '¥', PLN: 'zł', CHF: 'Fr', CNY: '¥', INR: '₹', KRW: '₩' }
+const savedPair = () => {
+  try { return JSON.parse(localStorage.getItem(PAIR_KEY)) || {} } catch { return {} }
+}
+const signedError = (method) => `${method.approxRate >= method.rate ? '+' : '−'}${method.errorPercent.toFixed(1)}%`
 
 function CurrencyPicker({ label, value, onChange, currencies }) {
-  return <label className="picker">
-    <span>{label}</span>
-    <select value={value} onChange={(event) => onChange(event.target.value)}>
-      {Object.entries(currencies).map(([code, name]) => <option key={code} value={code} title={name}>{code}</option>)}
-    </select>
-  </label>
+  return <label className="picker"><span>{label}</span><select value={value} onChange={(event) => onChange(event.target.value)}>
+    {Object.entries(currencies).map(([code, name]) => <option key={code} value={code} title={name}>{code}</option>)}
+  </select></label>
 }
 
-function MethodCard({ method, index, amount, exactValue, target }) {
+function MethodCard({ method, label, amount, exactValue, target, highlight }) {
   const mentalValue = amount * method.approxRate
-  return <article className={`method method-${index + 1}`}>
-    <header>
-      <span className="rank">{String(index + 1).padStart(2, '0')}</span>
-      <div><h3>{index === 0 ? 'Easiest route' : index === 1 ? 'Closer route' : 'Another route'}</h3>
-      <p>{method.errorPercent < 0.05 ? 'Exact' : `${method.errorPercent.toFixed(1)}% off`} · effort {method.effort.toFixed(1)}</p></div>
-    </header>
-    <div className="steps">
-      {method.steps.map((step, stepIndex) => <React.Fragment key={`${step.id}-${stepIndex}`}>
-        {stepIndex > 0 && <span className="then">then</span>}
-        <span className="step">{formatStep(step)}</span>
-      </React.Fragment>)}
-    </div>
-    <div className="result"><span>In your head</span><strong>≈ {SYMBOLS[target] || ''}{mentalValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}</strong></div>
-    <small>Market result: {(SYMBOLS[target] || '') + exactValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}</small>
+  return <article className={`method ${highlight ? 'method-highlight' : ''}`}>
+    <header><div><p className="method-label">{label}</p><h3>{method.steps.length} {method.steps.length === 1 ? 'step' : 'steps'} · {method.effort.toFixed(1)} effort</h3></div><b className={method.errorPercent < 0.05 ? 'error exact' : 'error'}>{method.errorPercent < 0.05 ? 'exact' : signedError(method)}</b></header>
+    <div className="steps">{method.steps.map((step, index) => <React.Fragment key={`${step.id}-${index}`}><span className="step">{formatStep(step)}</span>{index < method.steps.length - 1 && <span className="then">→</span>}</React.Fragment>)}</div>
+    <div className="result"><span>Head result</span><strong>≈ {SYMBOLS[target] || ''}{mentalValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}</strong></div>
+    <small>Live: {(SYMBOLS[target] || '') + exactValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}</small>
   </article>
 }
 
 function App() {
+  const remembered = savedPair()
   const [currencies, setCurrencies] = useState(FALLBACK_CURRENCIES)
-  const [source, setSource] = useState('EUR')
-  const [target, setTarget] = useState('PLN')
-  const [amount, setAmount] = useState(20)
+  const [source, setSource] = useState(remembered.source || 'EUR')
+  const [target, setTarget] = useState(remembered.target || 'PLN')
+  const [amountText, setAmountText] = useState('20')
   const [rate, setRate] = useState(null)
   const [date, setDate] = useState('')
   const [status, setStatus] = useState('loading')
   const [query, setQuery] = useState('')
 
-  useEffect(() => {
-    fetch('https://api.frankfurter.dev/v1/currencies')
-      .then((response) => response.ok ? response.json() : Promise.reject())
-      .then(setCurrencies).catch(() => {})
-  }, [])
-
+  useEffect(() => { fetch('https://api.frankfurter.dev/v1/currencies').then((response) => response.ok ? response.json() : Promise.reject()).then(setCurrencies).catch(() => {}) }, [])
+  useEffect(() => { try { localStorage.setItem(PAIR_KEY, JSON.stringify({ source, target })) } catch {} }, [source, target])
   useEffect(() => {
     if (source === target) { setRate(1); setStatus('ready'); setDate('Today'); return }
     setStatus('loading')
     fetch(`https://api.frankfurter.dev/v1/latest?from=${source}&to=${target}`)
-      .then((response) => response.ok ? response.json() : Promise.reject(new Error('Rates unavailable')))
+      .then((response) => response.ok ? response.json() : Promise.reject())
       .then((data) => { setRate(data.rates[target]); setDate(data.date); setStatus('ready') })
       .catch(() => setStatus('error'))
   }, [source, target])
 
-  const methods = useMemo(() => rate ? findMentalMethods(rate, 3) : [], [rate])
-  const filtered = useMemo(() => Object.entries(currencies).filter(([code, name]) => `${code} ${name}`.toLowerCase().includes(query.toLowerCase())).slice(0, 8), [currencies, query])
+  const amount = Number(amountText) || 0
+  const methods = useMemo(() => rate ? findMentalMethods(rate, 12).map((method) => ({ ...method, rate })) : [], [rate])
+  const { easiest, lowestError } = useMemo(() => selectFeaturedMethods(methods), [methods])
+  const alternatives = methods.filter((method) => method !== easiest && method !== lowestError).slice(0, 2)
+  const filtered = useMemo(() => Object.entries(currencies).filter(([code, name]) => `${code} ${name}`.toLowerCase().includes(query.toLowerCase())).slice(0, 6), [currencies, query])
   const exactValue = amount * (rate || 0)
-  const swap = () => { setSource(target); setTarget(source) }
   const chooseCurrency = (code) => { setSource(code); if (code === target) setTarget(code === 'EUR' ? 'USD' : 'EUR'); setQuery('') }
 
   return <main>
-    <nav><a className="brand" href="#top" aria-label="Twist home"><span>↻</span> twist</a><div className="nav-note">MENTAL FX · LIVE RATES</div></nav>
-
+    <nav><a className="brand" href="#top" aria-label="Pally home"><span>↻</span> pally</a><div className="nav-note">Friendly price maths</div></nav>
     <section className="hero" id="top">
-      <div className="hero-copy"><p className="kicker">Currency conversion, minus the calculator</p><h1>Turn prices<br />into <em>easy maths.</em></h1><p className="intro">Twist finds a short chain of simple operations—double it, halve it, take off 10%—so you can convert prices in your head.</p></div>
+      <div className="hero-copy"><p className="kicker">Your currency pal</p><h1>Prices, made<br /><em>friendly.</em></h1><p className="intro">A quick way to turn foreign prices into simple, memorable maths.</p></div>
       <div className="converter">
-        <div className="amount-wrap"><label htmlFor="amount">I’m looking at</label><div><span>{SYMBOLS[source] || source}</span><input id="amount" type="number" min="0" value={amount} onChange={(event) => setAmount(Number(event.target.value))} /></div></div>
-        <div className="currency-row"><CurrencyPicker label="From" value={source} onChange={setSource} currencies={currencies}/><button className="swap" onClick={swap} aria-label="Swap currencies">⇄</button><CurrencyPicker label="My currency" value={target} onChange={setTarget} currencies={currencies}/></div>
-        <div className="market-rate"><span><i className={status}></i>{status === 'error' ? 'Rate unavailable' : status === 'loading' ? 'Fetching live rate…' : `1 ${source} = ${rate.toLocaleString(undefined, { maximumFractionDigits: 5 })} ${target}`}</span><small>{date && `Updated ${date} · Frankfurter / ECB`}</small></div>
+        <div className="amount-wrap"><label htmlFor="amount">Price</label><div><span>{SYMBOLS[source] || source}</span><input id="amount" inputMode="decimal" value={amountText} onChange={(event) => setAmountText(normalizeAmountInput(event.target.value.replace(/[^0-9.]/g, '')))} /></div></div>
+        <div className="currency-row"><CurrencyPicker label="From" value={source} onChange={setSource} currencies={currencies}/><button className="swap" onClick={() => { setSource(target); setTarget(source) }} aria-label="Swap currencies">⇄</button><CurrencyPicker label="To" value={target} onChange={setTarget} currencies={currencies}/></div>
+        <div className="market-rate"><span><i className={status}></i>{status === 'error' ? 'Rate unavailable' : status === 'loading' ? 'Getting live rate…' : `1 ${source} = ${rate.toLocaleString(undefined, { maximumFractionDigits: 5 })} ${target}`}</span><small>{date && `ECB · ${date}`}</small></div>
       </div>
     </section>
-
-    <section className="routes">
-      <div className="section-title"><p>YOUR MENTAL SHORTCUTS</p><h2>{status === 'ready' ? `${SYMBOLS[source] || ''}${amount || 0} → about ${SYMBOLS[target] || ''}${exactValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : 'Finding a route…'}</h2></div>
-      <div className="method-grid">{methods.map((method, index) => <MethodCard key={method.steps.map((s) => s.id).join('-')} method={method} index={index} amount={amount} exactValue={exactValue} target={target} />)}</div>
+    <section className="routes"><div className="section-title"><p>Mental routes</p><h2>{status === 'ready' ? `${SYMBOLS[source] || ''}${amount} ≈ ${SYMBOLS[target] || ''}${exactValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : 'Finding shortcuts…'}</h2></div>
+      <div className="method-grid">{easiest && <MethodCard method={easiest} label="Easiest" highlight amount={amount} exactValue={exactValue} target={target}/>} {lowestError && lowestError !== easiest && <MethodCard method={lowestError} label="Lowest error" amount={amount} exactValue={exactValue} target={target}/>} {alternatives.map((method) => <MethodCard key={method.steps.map((step) => step.id).join('-')} method={method} label="Alternative" amount={amount} exactValue={exactValue} target={target}/>)}</div>
     </section>
-
-    <section className="index-section">
-      <div><p className="kicker">Currency index</p><h2>Where are you going?</h2><p>Search currencies by country, name, or code. Pick one to make it the price you’re converting from.</p></div>
-      <div className="search-panel"><label><span>⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search USD, yen, Poland…" /></label><div className="currency-list">{filtered.map(([code, name]) => <button key={code} onClick={() => chooseCurrency(code)}><b>{code}</b><span>{name}</span><i>→</i></button>)}</div></div>
-    </section>
-
-    <footer><div className="brand"><span>↻</span> twist</div><p>Live reference rates by Frankfurter, sourced from the European Central Bank. For everyday estimates—not trading.</p></footer>
+    <section className="index-section"><div><p className="kicker">Currency index</p><h2>Pick a currency.</h2></div><div className="search-panel"><label><span>⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search USD, yen, Poland…" /></label><div className="currency-list">{filtered.map(([code, name]) => <button key={code} onClick={() => chooseCurrency(code)}><b>{code}</b><span>{name}</span><i>→</i></button>)}</div></div></section>
+    <footer><div className="brand"><span>↻</span> pally</div><p>Live reference rates: Frankfurter / ECB.</p></footer>
   </main>
 }
-
 createRoot(document.getElementById('root')).render(<App />)
