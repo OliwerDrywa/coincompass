@@ -12,7 +12,7 @@ const FALLBACK_CURRENCIES = {
   PHP: 'Philippine Peso', PLN: 'Polish Złoty', RON: 'Romanian Leu', SEK: 'Swedish Krona',
   SGD: 'Singapore Dollar', THB: 'Thai Baht', TRY: 'Turkish Lira', USD: 'United States Dollar', ZAR: 'South African Rand',
 }
-const PAIR_KEY = 'pally-last-currency-pair'
+const PAIR_KEY = 'coincompass-last-currency-pair'
 const SYMBOLS = { EUR: '€', USD: '$', GBP: '£', JPY: '¥', PLN: 'zł', CHF: 'Fr', CNY: '¥', INR: '₹', KRW: '₩' }
 const savedPair = () => {
   try { return JSON.parse(localStorage.getItem(PAIR_KEY)) || {} } catch { return {} }
