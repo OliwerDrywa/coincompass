@@ -26,12 +26,20 @@ h1 em { color: #337121; font-style: normal; }
 .picker select { width: 100%; height: 54px; padding: 0 13px; border: 1px solid #bfc3b9; border-radius: 14px; background: #f4f5ef; font-weight: 700; }
 .swap { width: 49px; height: 49px; margin-bottom: 2px; border: 0; border-radius: 50%; background: #163300; color: #9fe870; font-size: 24px; transition: transform .2s; }
 .swap:hover { transform: rotate(180deg) scale(1.05); }
-.market-rate { display: flex; justify-content: space-between; gap: 15px; margin-top: 24px; padding-top: 18px; border-top: 1px solid #dfe1da; font-size: 13px; }
+.quick-select { display: block; margin-top: 18px; }
+.quick-select > span { display: block; margin-bottom: 8px; font: 500 11px 'DM Mono', monospace; color: #5b5d58; text-transform: uppercase; letter-spacing: .09em; }
+.quick-select select { width: 100%; height: 48px; padding: 0 13px; border: 1px solid #a8bd99; border-radius: 13px; background: #e8f5dd; color: #1f4211; font-weight: 800; }
+.market-rate { display: flex; justify-content: space-between; gap: 15px; margin-top: 18px; padding-top: 18px; border-top: 1px solid #dfe1da; font-size: 13px; }
 .market-rate span { font-weight: 700; }
 .market-rate small { color: #72756f; text-align: right; }
 .market-rate i { display: inline-block; width: 7px; height: 7px; margin-right: 7px; border-radius: 50%; background: #e5a520; }
 .market-rate i.ready { background: #1c9c53; }
 .market-rate i.error { background: #d03238; }
+.saved-settings { display: grid; grid-template-columns: .65fr 1.35fr; gap: clamp(35px, 7vw, 110px); padding: clamp(60px, 8vw, 100px) clamp(20px, 6vw, 90px); background: #e9eee2; }
+.saved-settings h2 { margin: 0; font-size: clamp(35px, 4vw, 56px); line-height: .95; letter-spacing: -.06em; }
+.pin-list { display: grid; grid-template-columns: repeat(3, 1fr); align-content: start; gap: 9px; max-height: 390px; padding-right: 5px; overflow-y: auto; }
+.pin-list button { display: grid; grid-template-columns: 18px auto; gap: 0 8px; align-items: center; padding: 11px; border: 1px solid #cfd4ca; border-radius: 12px; color: #272924; background: #fff; text-align: left; }
+.pin-list button span { grid-row: 1 / 3; color: #7d8279; font-size: 18px; }.pin-list button b { font: 700 13px 'DM Mono', monospace; }.pin-list button small { overflow: hidden; color: #696e65; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }.pin-list button:hover, .pin-list button.is-pinned { border-color: #5c982e; background: #e5f5d8; }.pin-list button.is-pinned span { color: #337121; }
 .routes { padding: clamp(70px, 9vw, 120px) clamp(20px, 6vw, 90px); background: #163300; color: white; }
 .section-title { display: flex; align-items: end; justify-content: space-between; gap: 30px; margin-bottom: 48px; }
 .section-title p { color: #9fe870; }
@@ -65,5 +73,5 @@ h1 em { color: #337121; font-style: normal; }
 footer { display: flex; align-items: center; justify-content: space-between; gap: 30px; padding: 36px clamp(20px, 6vw, 90px); background: #0e0f0c; color: white; }
 footer .brand { color: white; }
 footer p { max-width: 600px; color: #aeb1aa; font-size: 12px; line-height: 1.5; text-align: right; }
-@media (max-width: 900px) { .hero, .index-section { grid-template-columns: 1fr; } .hero { padding-top: 70px; } .converter { max-width: none; } .method-grid { grid-template-columns: 1fr; } .method { min-height: 310px; } .method-1 { transform: none; } }
+@media (max-width: 900px) { .hero, .saved-settings, .index-section { grid-template-columns: 1fr; } .hero { padding-top: 70px; } .converter { max-width: none; } .method-grid { grid-template-columns: 1fr; } .method { min-height: 310px; } .method-1 { transform: none; } }
 @media (max-width: 560px) { nav { height: 64px; } .nav-note { display: none; } h1 { font-size: 58px; } .hero { min-height: auto; padding-bottom: 70px; } .converter { padding: 20px; border-radius: 22px; } .amount-wrap input { font-size: 50px; } .currency-row { grid-template-columns: 1fr auto; } .currency-row .picker:last-child { grid-column: 1 / -1; } .swap { grid-row: 1; grid-column: 2; } .section-title { display: block; } .section-title h2 { margin-top: 15px; } footer { display: block; } footer p { margin-top: 25px; text-align: left; } }

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { findMentalMethods, formatStep, mergeCurrencyCatalogs, normalizeAmountInput, selectFeaturedMethods, sortCurrencies, toCurrencyCatalog } from './conversion.js'
+import { addRecentPair, buildQuickSelectOptions, togglePinnedCurrency } from './preferences.js'
 import './style.css'
 
 const FALLBACK_CURRENCIES = {
@@ -13,10 +14,11 @@ const FALLBACK_CURRENCIES = {
   SGD: 'Singapore Dollar', THB: 'Thai Baht', TRY: 'Turkish Lira', USD: 'United States Dollar', ZAR: 'South African Rand',
 }
 const PAIR_KEY = 'coincompass-last-currency-pair'
+const PINS_KEY = 'coincompass-pinned-currencies'
+const RECENTS_KEY = 'coincompass-recent-currency-pairs'
 const SYMBOLS = { EUR: '€', USD: '$', GBP: '£', JPY: '¥', PLN: 'zł', CHF: 'Fr', CNY: '¥', INR: '₹', KRW: '₩' }
-const savedPair = () => {
-  try { return JSON.parse(localStorage.getItem(PAIR_KEY)) || {} } catch { return {} }
-}
+const readStorage = (key, fallback) => { try { return JSON.parse(localStorage.getItem(key)) ?? fallback } catch { return fallback } }
+const savedPair = () => readStorage(PAIR_KEY, {})
 const signedError = (method) => `${method.approxRate >= method.rate ? '+' : '−'}${method.errorPercent.toFixed(1)}%`
 
 function CurrencyPicker({ label, value, onChange, currencies }) {
@@ -45,9 +47,14 @@ function App() {
   const [rate, setRate] = useState(null)
   const [date, setDate] = useState('')
   const [status, setStatus] = useState('loading')
+  const [pinnedCurrencies, setPinnedCurrencies] = useState(() => readStorage(PINS_KEY, ['EUR', 'USD', 'PLN']))
+  const [recentPairs, setRecentPairs] = useState(() => readStorage(RECENTS_KEY, []))
 
   useEffect(() => { fetch('https://api.frankfurter.dev/v2/currencies').then((response) => response.ok ? response.json() : Promise.reject()).then((catalog) => setCurrencies(mergeCurrencyCatalogs(toCurrencyCatalog(catalog)))).catch(() => {}) }, [])
   useEffect(() => { try { localStorage.setItem(PAIR_KEY, JSON.stringify({ source, target })) } catch {} }, [source, target])
+  useEffect(() => { try { localStorage.setItem(PINS_KEY, JSON.stringify(pinnedCurrencies)) } catch {} }, [pinnedCurrencies])
+  useEffect(() => { try { localStorage.setItem(RECENTS_KEY, JSON.stringify(recentPairs)) } catch {} }, [recentPairs])
+  useEffect(() => { setRecentPairs((current) => addRecentPair(current, { source, target })) }, [source, target])
   useEffect(() => {
     if (source === target) { setRate(1); setStatus('ready'); setDate('Today'); return }
     setStatus('loading')
@@ -62,6 +69,11 @@ function App() {
   const { easiest, lowestError } = useMemo(() => selectFeaturedMethods(methods), [methods])
   const alternatives = methods.filter((method) => method !== easiest && method !== lowestError).slice(0, 1)
   const exactValue = amount * (rate || 0)
+  const quickOptions = useMemo(() => buildQuickSelectOptions(pinnedCurrencies.filter((code) => currencies[code]), recentPairs), [pinnedCurrencies, recentPairs, currencies])
+  const applyQuickSelect = (value) => {
+    if (value.startsWith('currency:')) setSource(value.slice('currency:'.length))
+    if (value.startsWith('pair:')) { const [, nextSource, nextTarget] = value.split(':'); setSource(nextSource); setTarget(nextTarget) }
+  }
 
   return <main>
     <nav><a className="brand" href="#top" aria-label="CoinCompass home"><span>↻</span> CoinCompass</a><div className="nav-note">Friendly price maths</div></nav>
@@ -70,9 +82,11 @@ function App() {
       <div className="converter">
         <div className="amount-wrap"><label htmlFor="amount">Price</label><div><span>{SYMBOLS[source] || source}</span><input id="amount" inputMode="decimal" value={amountText} onChange={(event) => setAmountText(normalizeAmountInput(event.target.value.replace(/[^0-9.]/g, '')))} /></div></div>
         <div className="currency-row"><CurrencyPicker label="From" value={source} onChange={setSource} currencies={currencies}/><button className="swap" onClick={() => { setSource(target); setTarget(source) }} aria-label="Swap currencies">⇄</button><CurrencyPicker label="To" value={target} onChange={setTarget} currencies={currencies}/></div>
+        <label className="quick-select"><span>Quick select</span><select value="" onChange={(event) => { applyQuickSelect(event.target.value); event.target.value = '' }} aria-label="Quick select saved currencies and recent pairs"><option value="" disabled>★ Pinned currencies &amp; recent pairs</option>{quickOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
         <div className="market-rate"><span><i className={status}></i>{status === 'error' ? 'Rate unavailable' : status === 'loading' ? 'Getting live rate…' : `1 ${source} = ${rate.toLocaleString(undefined, { maximumFractionDigits: 5 })} ${target}`}</span><small>{date && `ECB · ${date}`}</small></div>
       </div>
     </section>
+    <section className="saved-settings"><div><p className="kicker">Saved currencies</p><h2>Manage your pins.</h2></div><div className="pin-list">{sortCurrencies(currencies).map(([code, name]) => <button key={code} className={pinnedCurrencies.includes(code) ? 'is-pinned' : ''} onClick={() => setPinnedCurrencies((current) => togglePinnedCurrency(current, code))} aria-pressed={pinnedCurrencies.includes(code)}><span>{pinnedCurrencies.includes(code) ? '★' : '☆'}</span><b>{code}</b><small>{name}</small></button>)}</div></section>
     <section className="routes"><div className="section-title"><p>Mental routes</p><h2>{status === 'ready' ? `${SYMBOLS[source] || ''}${amount} ≈ ${SYMBOLS[target] || ''}${exactValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : 'Finding shortcuts…'}</h2></div>
       <div className="method-grid">{easiest && <MethodCard method={easiest} label="Easiest" highlight amount={amount} exactValue={exactValue} target={target}/>} {lowestError && lowestError !== easiest && <MethodCard method={lowestError} label="Lowest error" amount={amount} exactValue={exactValue} target={target}/>} {alternatives.map((method) => <MethodCard key={method.steps.map((step) => step.id).join('-')} method={method} label="Alternative" amount={amount} exactValue={exactValue} target={target}/>)}</div>
     </section>
