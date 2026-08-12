@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { findMentalMethods, formatStep, mergeCurrencyCatalogs, normalizeAmountInput, selectFeaturedMethods, sortCurrencies } from './conversion.js'
+import { findMentalMethods, formatStep, mergeCurrencyCatalogs, normalizeAmountInput, selectFeaturedMethods, sortCurrencies, toCurrencyCatalog } from './conversion.js'
 import './style.css'
 
 const FALLBACK_CURRENCIES = {
@@ -46,14 +46,14 @@ function App() {
   const [date, setDate] = useState('')
   const [status, setStatus] = useState('loading')
 
-  useEffect(() => { fetch('https://api.frankfurter.dev/v1/currencies').then((response) => response.ok ? response.json() : Promise.reject()).then((catalog) => setCurrencies(mergeCurrencyCatalogs(catalog))).catch(() => {}) }, [])
+  useEffect(() => { fetch('https://api.frankfurter.dev/v2/currencies').then((response) => response.ok ? response.json() : Promise.reject()).then((catalog) => setCurrencies(mergeCurrencyCatalogs(toCurrencyCatalog(catalog)))).catch(() => {}) }, [])
   useEffect(() => { try { localStorage.setItem(PAIR_KEY, JSON.stringify({ source, target })) } catch {} }, [source, target])
   useEffect(() => {
     if (source === target) { setRate(1); setStatus('ready'); setDate('Today'); return }
     setStatus('loading')
-    fetch(`https://api.frankfurter.dev/v1/latest?from=${source}&to=${target}`)
+    fetch(`https://api.frankfurter.dev/v2/rate/${source}/${target}`)
       .then((response) => response.ok ? response.json() : Promise.reject())
-      .then((data) => { setRate(data.rates[target]); setDate(data.date); setStatus('ready') })
+      .then((data) => { setRate(data.rate); setDate(data.date); setStatus('ready') })
       .catch(() => setStatus('error'))
   }, [source, target])
 

@@ -39,8 +39,12 @@ export function mergeCurrencyCatalogs(currencies) {
   return { ...EXTRA_CURRENCIES, ...currencies }
 }
 
+export function toCurrencyCatalog(currencies) {
+  return Object.fromEntries(currencies.map(({ iso_code, name }) => [iso_code, name]))
+}
+
 export function sortCurrencies(currencies) {
-  return Object.entries(currencies).sort(([, nameA], [, nameB]) => nameA.localeCompare(nameB))
+  return Object.entries(currencies).sort(([codeA], [codeB]) => codeA.localeCompare(codeB))
 }
 
 const LABELS = {
