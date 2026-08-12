@@ -1,0 +1,19 @@
+{
+  "name": "CoinCompass — Friendly Currency Maths",
+  "short_name": "CoinCompass",
+  "description": "Live currency rates and simple mental-math shortcuts, available offline.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f4f5ef",
+  "theme_color": "#163300",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

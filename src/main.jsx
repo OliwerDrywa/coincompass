@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { findMentalMethods, formatStep, mergeCurrencyCatalogs, normalizeAmountInput, selectFeaturedMethods, sortCurrencies, toCurrencyCatalog } from './conversion.js'
+import { registerServiceWorker } from './pwa.js'
 import './style.css'
 
 const FALLBACK_CURRENCIES = {
@@ -80,3 +81,5 @@ function App() {
   </main>
 }
 createRoot(document.getElementById('root')).render(<App />)
+
+registerServiceWorker().catch((error) => console.warn('Service worker registration failed', error))
