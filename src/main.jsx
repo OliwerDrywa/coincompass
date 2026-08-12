@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { findMentalMethods, formatStep, mergeCurrencyCatalogs, normalizeAmountInput, selectFeaturedMethods, sortCurrencies, toCurrencyCatalog } from './conversion.js'
+import { addRecentPair, togglePinnedCurrency } from './preferences.js'
 import './style.css'
 
 const FALLBACK_CURRENCIES = {
@@ -13,11 +14,16 @@ const FALLBACK_CURRENCIES = {
   SGD: 'Singapore Dollar', THB: 'Thai Baht', TRY: 'Turkish Lira', USD: 'United States Dollar', ZAR: 'South African Rand',
 }
 const PAIR_KEY = 'coincompass-last-currency-pair'
+const PINS_KEY = 'coincompass-pinned-currencies'
+const RECENTS_KEY = 'coincompass-recent-currency-pairs'
 const SYMBOLS = { EUR: '€', USD: '$', GBP: '£', JPY: '¥', PLN: 'zł', CHF: 'Fr', CNY: '¥', INR: '₹', KRW: '₩' }
-const savedPair = () => {
-  try { return JSON.parse(localStorage.getItem(PAIR_KEY)) || {} } catch { return {} }
+
+const readStorage = (key, fallback) => {
+  try { return JSON.parse(localStorage.getItem(key)) ?? fallback } catch { return fallback }
 }
+const savedPair = () => readStorage(PAIR_KEY, {})
 const signedError = (method) => `${method.approxRate >= method.rate ? '+' : '−'}${method.errorPercent.toFixed(1)}%`
+const formatPair = (pair) => `${pair.source} → ${pair.target}`
 
 function CurrencyPicker({ label, value, onChange, currencies }) {
   const options = useMemo(() => sortCurrencies(currencies), [currencies])
@@ -45,9 +51,14 @@ function App() {
   const [rate, setRate] = useState(null)
   const [date, setDate] = useState('')
   const [status, setStatus] = useState('loading')
+  const [pinnedCurrencies, setPinnedCurrencies] = useState(() => readStorage(PINS_KEY, ['EUR', 'USD', 'PLN']))
+  const [recentPairs, setRecentPairs] = useState(() => readStorage(RECENTS_KEY, []))
 
   useEffect(() => { fetch('https://api.frankfurter.dev/v2/currencies').then((response) => response.ok ? response.json() : Promise.reject()).then((catalog) => setCurrencies(mergeCurrencyCatalogs(toCurrencyCatalog(catalog)))).catch(() => {}) }, [])
   useEffect(() => { try { localStorage.setItem(PAIR_KEY, JSON.stringify({ source, target })) } catch {} }, [source, target])
+  useEffect(() => { try { localStorage.setItem(PINS_KEY, JSON.stringify(pinnedCurrencies)) } catch {} }, [pinnedCurrencies])
+  useEffect(() => { try { localStorage.setItem(RECENTS_KEY, JSON.stringify(recentPairs)) } catch {} }, [recentPairs])
+  useEffect(() => { setRecentPairs((current) => addRecentPair(current, { source, target })) }, [source, target])
   useEffect(() => {
     if (source === target) { setRate(1); setStatus('ready'); setDate('Today'); return }
     setStatus('loading')
@@ -62,21 +73,29 @@ function App() {
   const { easiest, lowestError } = useMemo(() => selectFeaturedMethods(methods), [methods])
   const alternatives = methods.filter((method) => method !== easiest && method !== lowestError).slice(0, 1)
   const exactValue = amount * (rate || 0)
+  const pinned = pinnedCurrencies.filter((code) => currencies[code])
 
   return <main>
-    <nav><a className="brand" href="#top" aria-label="CoinCompass home"><span>↻</span> CoinCompass</a><div className="nav-note">Friendly price maths</div></nav>
+    <nav><a className="brand" href="#top" aria-label="CoinCompass home"><span>↻</span> CoinCompass</a><div className="nav-note">Works offline after your first visit</div></nav>
     <section className="hero" id="top">
-      <div className="hero-copy"><p className="kicker">Your currency pal</p><h1>Prices, made<br /><em>friendly.</em></h1><p className="intro">A quick way to turn foreign prices into simple, memorable maths.</p></div>
+      <div className="hero-copy"><p className="kicker">Currency converter</p><h1>Know the price.<br /><em>Fast.</em></h1><p className="intro">Live exchange rates with a memorable way to do the maths.</p></div>
       <div className="converter">
         <div className="amount-wrap"><label htmlFor="amount">Price</label><div><span>{SYMBOLS[source] || source}</span><input id="amount" inputMode="decimal" value={amountText} onChange={(event) => setAmountText(normalizeAmountInput(event.target.value.replace(/[^0-9.]/g, '')))} /></div></div>
         <div className="currency-row"><CurrencyPicker label="From" value={source} onChange={setSource} currencies={currencies}/><button className="swap" onClick={() => { setSource(target); setTarget(source) }} aria-label="Swap currencies">⇄</button><CurrencyPicker label="To" value={target} onChange={setTarget} currencies={currencies}/></div>
         <div className="market-rate"><span><i className={status}></i>{status === 'error' ? 'Rate unavailable' : status === 'loading' ? 'Getting live rate…' : `1 ${source} = ${rate.toLocaleString(undefined, { maximumFractionDigits: 5 })} ${target}`}</span><small>{date && `ECB · ${date}`}</small></div>
       </div>
     </section>
+    <section className="quick-access" aria-label="Saved currencies and recent conversions">
+      <div className="quick-panel"><div className="quick-heading"><div><p className="eyebrow">Your shortcuts</p><h2>Pinned currencies</h2></div><span>{pinned.length} saved</span></div><div className="currency-chips">{pinned.length ? pinned.map((code) => <button className="currency-chip" key={code} onClick={() => setSource(code)}><b>{code}</b><span>{currencies[code]}</span><i aria-hidden="true">↗</i></button>) : <p className="empty-state">Pin the currencies you use most below.</p>}</div></div>
+      <div className="quick-panel"><div className="quick-heading"><div><p className="eyebrow">Pick up where you left off</p><h2>Recent pairs</h2></div><span>{recentPairs.length} saved</span></div><div className="recent-list">{recentPairs.length ? recentPairs.map((pair) => <button key={formatPair(pair)} onClick={() => { setSource(pair.source); setTarget(pair.target) }}><b>{formatPair(pair)}</b><span>Use pair</span></button>) : <p className="empty-state">Your recent conversions will appear here.</p>}</div></div>
+    </section>
+    <section className="currency-manager"><div><p className="eyebrow">Make it yours</p><h2>Pin currencies for instant access.</h2></div><div className="currency-manager-list">{sortCurrencies(currencies).map(([code, name]) => <button key={code} className={pinnedCurrencies.includes(code) ? 'is-pinned' : ''} onClick={() => setPinnedCurrencies((current) => togglePinnedCurrency(current, code))} aria-pressed={pinnedCurrencies.includes(code)}><span>{pinnedCurrencies.includes(code) ? '★' : '☆'}</span><b>{code}</b><small>{name}</small></button>)}</div></section>
     <section className="routes"><div className="section-title"><p>Mental routes</p><h2>{status === 'ready' ? `${SYMBOLS[source] || ''}${amount} ≈ ${SYMBOLS[target] || ''}${exactValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : 'Finding shortcuts…'}</h2></div>
       <div className="method-grid">{easiest && <MethodCard method={easiest} label="Easiest" highlight amount={amount} exactValue={exactValue} target={target}/>} {lowestError && lowestError !== easiest && <MethodCard method={lowestError} label="Lowest error" amount={amount} exactValue={exactValue} target={target}/>} {alternatives.map((method) => <MethodCard key={method.steps.map((step) => step.id).join('-')} method={method} label="Alternative" amount={amount} exactValue={exactValue} target={target}/>)}</div>
     </section>
     <footer><div className="brand"><span>↻</span> CoinCompass</div><p>Live reference rates: Frankfurter / ECB.</p></footer>
   </main>
 }
+
+if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js'))
 createRoot(document.getElementById('root')).render(<App />)
