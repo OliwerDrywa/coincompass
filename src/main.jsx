@@ -64,7 +64,7 @@ function App() {
   const exactValue = amount * (rate || 0)
 
   return <main>
-    <nav><a className="brand" href="#top" aria-label="Pally home"><span>↻</span> pally</a><div className="nav-note">Friendly price maths</div></nav>
+    <nav><a className="brand" href="#top" aria-label="CoinCompass home"><span>↻</span> CoinCompass</a><div className="nav-note">Friendly price maths</div></nav>
     <section className="hero" id="top">
       <div className="hero-copy"><p className="kicker">Your currency pal</p><h1>Prices, made<br /><em>friendly.</em></h1><p className="intro">A quick way to turn foreign prices into simple, memorable maths.</p></div>
       <div className="converter">
@@ -76,7 +76,7 @@ function App() {
     <section className="routes"><div className="section-title"><p>Mental routes</p><h2>{status === 'ready' ? `${SYMBOLS[source] || ''}${amount} ≈ ${SYMBOLS[target] || ''}${exactValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : 'Finding shortcuts…'}</h2></div>
       <div className="method-grid">{easiest && <MethodCard method={easiest} label="Easiest" highlight amount={amount} exactValue={exactValue} target={target}/>} {lowestError && lowestError !== easiest && <MethodCard method={lowestError} label="Lowest error" amount={amount} exactValue={exactValue} target={target}/>} {alternatives.map((method) => <MethodCard key={method.steps.map((step) => step.id).join('-')} method={method} label="Alternative" amount={amount} exactValue={exactValue} target={target}/>)}</div>
     </section>
-    <footer><div className="brand"><span>↻</span> pally</div><p>Live reference rates: Frankfurter / ECB.</p></footer>
+    <footer><div className="brand"><span>↻</span> CoinCompass</div><p>Live reference rates: Frankfurter / ECB.</p></footer>
   </main>
 }
 createRoot(document.getElementById('root')).render(<App />)
