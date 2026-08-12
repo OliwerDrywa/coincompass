@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { findMentalMethods, formatStep, normalizeAmountInput, selectFeaturedMethods } from './conversion.js'
+import { findMentalMethods, formatStep, mergeCurrencyCatalogs, normalizeAmountInput, selectFeaturedMethods } from './conversion.js'
 
 describe('mental conversion methods', () => {
   it('ranks an exact easy operation first', () => {
@@ -32,6 +32,16 @@ describe('mental conversion methods', () => {
     expect(normalizeAmountInput('04')).toBe('4')
     expect(normalizeAmountInput('0004.50')).toBe('4.50')
     expect(normalizeAmountInput('0.5')).toBe('0.5')
+  })
+
+  it('adds Taiwan and other requested Asian currencies to an API catalog', () => {
+    const currencies = mergeCurrencyCatalogs({ CNY: 'Chinese Renminbi Yuan', JPY: 'Japanese Yen' })
+    expect(currencies).toMatchObject({
+      CNY: 'Chinese Renminbi Yuan',
+      JPY: 'Japanese Yen',
+      TWD: 'New Taiwan Dollar',
+      HKD: 'Hong Kong Dollar',
+    })
   })
 
   it('returns separate easiest and lowest-error featured methods', () => {

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { findMentalMethods, formatStep, normalizeAmountInput, selectFeaturedMethods } from './conversion.js'
+import { findMentalMethods, formatStep, mergeCurrencyCatalogs, normalizeAmountInput, selectFeaturedMethods } from './conversion.js'
 import './style.css'
 
 const FALLBACK_CURRENCIES = {
@@ -37,16 +37,15 @@ function MethodCard({ method, label, amount, exactValue, target, highlight }) {
 
 function App() {
   const remembered = savedPair()
-  const [currencies, setCurrencies] = useState(FALLBACK_CURRENCIES)
+  const [currencies, setCurrencies] = useState(mergeCurrencyCatalogs(FALLBACK_CURRENCIES))
   const [source, setSource] = useState(remembered.source || 'EUR')
   const [target, setTarget] = useState(remembered.target || 'PLN')
   const [amountText, setAmountText] = useState('20')
   const [rate, setRate] = useState(null)
   const [date, setDate] = useState('')
   const [status, setStatus] = useState('loading')
-  const [query, setQuery] = useState('')
 
-  useEffect(() => { fetch('https://api.frankfurter.dev/v1/currencies').then((response) => response.ok ? response.json() : Promise.reject()).then(setCurrencies).catch(() => {}) }, [])
+  useEffect(() => { fetch('https://api.frankfurter.dev/v1/currencies').then((response) => response.ok ? response.json() : Promise.reject()).then((catalog) => setCurrencies(mergeCurrencyCatalogs(catalog))).catch(() => {}) }, [])
   useEffect(() => { try { localStorage.setItem(PAIR_KEY, JSON.stringify({ source, target })) } catch {} }, [source, target])
   useEffect(() => {
     if (source === target) { setRate(1); setStatus('ready'); setDate('Today'); return }
@@ -60,10 +59,8 @@ function App() {
   const amount = Number(amountText) || 0
   const methods = useMemo(() => rate ? findMentalMethods(rate, 12).map((method) => ({ ...method, rate })) : [], [rate])
   const { easiest, lowestError } = useMemo(() => selectFeaturedMethods(methods), [methods])
-  const alternatives = methods.filter((method) => method !== easiest && method !== lowestError).slice(0, 2)
-  const filtered = useMemo(() => Object.entries(currencies).filter(([code, name]) => `${code} ${name}`.toLowerCase().includes(query.toLowerCase())).slice(0, 6), [currencies, query])
+  const alternatives = methods.filter((method) => method !== easiest && method !== lowestError).slice(0, 1)
   const exactValue = amount * (rate || 0)
-  const chooseCurrency = (code) => { setSource(code); if (code === target) setTarget(code === 'EUR' ? 'USD' : 'EUR'); setQuery('') }
 
   return <main>
     <nav><a className="brand" href="#top" aria-label="Pally home"><span>↻</span> pally</a><div className="nav-note">Friendly price maths</div></nav>
@@ -78,7 +75,6 @@ function App() {
     <section className="routes"><div className="section-title"><p>Mental routes</p><h2>{status === 'ready' ? `${SYMBOLS[source] || ''}${amount} ≈ ${SYMBOLS[target] || ''}${exactValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : 'Finding shortcuts…'}</h2></div>
       <div className="method-grid">{easiest && <MethodCard method={easiest} label="Easiest" highlight amount={amount} exactValue={exactValue} target={target}/>} {lowestError && lowestError !== easiest && <MethodCard method={lowestError} label="Lowest error" amount={amount} exactValue={exactValue} target={target}/>} {alternatives.map((method) => <MethodCard key={method.steps.map((step) => step.id).join('-')} method={method} label="Alternative" amount={amount} exactValue={exactValue} target={target}/>)}</div>
     </section>
-    <section className="index-section"><div><p className="kicker">Currency index</p><h2>Pick a currency.</h2></div><div className="search-panel"><label><span>⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search USD, yen, Poland…" /></label><div className="currency-list">{filtered.map(([code, name]) => <button key={code} onClick={() => chooseCurrency(code)}><b>{code}</b><span>{name}</span><i>→</i></button>)}</div></div></section>
     <footer><div className="brand"><span>↻</span> pally</div><p>Live reference rates: Frankfurter / ECB.</p></footer>
   </main>
 }

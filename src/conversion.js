@@ -27,6 +27,18 @@ const OPERATIONS = [
   { id: 'divide3', factor: 1 / 3, cost: 2 },
 ]
 
+export const EXTRA_CURRENCIES = {
+  AED: 'United Arab Emirates Dirham', ARS: 'Argentine Peso', BDT: 'Bangladeshi Taka',
+  CLP: 'Chilean Peso', COP: 'Colombian Peso', EGP: 'Egyptian Pound', HKD: 'Hong Kong Dollar',
+  IDR: 'Indonesian Rupiah', ILS: 'Israeli New Shekel', KES: 'Kenyan Shilling', KRW: 'South Korean Won',
+  MAD: 'Moroccan Dirham', NGN: 'Nigerian Naira', PKR: 'Pakistani Rupee', SAR: 'Saudi Riyal',
+  THB: 'Thai Baht', TWD: 'New Taiwan Dollar', UAH: 'Ukrainian Hryvnia', VND: 'Vietnamese Dong',
+}
+
+export function mergeCurrencyCatalogs(currencies) {
+  return { ...EXTRA_CURRENCIES, ...currencies }
+}
+
 const LABELS = {
   times2: 'multiply by 2', divide2: 'divide by 2',
   times3: 'multiply by 3', divide3: 'divide by 3',
