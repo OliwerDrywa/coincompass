@@ -1,24 +1,21 @@
-# Kraut Vercel PR Template
+# Pally
 
-Minimal Vite + React starter for the Hermes software-development loop.
+A front-end-only currency search and mental conversion assistant. Twist fetches current reference rates from the free [Frankfurter API](https://frankfurter.dev/) and ranks short chains of easy arithmetic operations to approximate each exchange rate.
 
-## Local
+## Features
+
+- Searchable index of ECB-supported currencies
+- Live reference rates with no API key or backend
+- Ranked mental-math routes using ×/÷ 2, 3, 4, 5, 8, 10 and ±10/20/25%
+- Effort and approximation-error indicators
+- Responsive interface for travel and in-store use
+
+## Local development
 
 ```bash
 npm install
+npm test
 npm run dev
 ```
 
-## Preview workflow
-
-Every pull request should receive an isolated Vercel preview deployment through the repository's Vercel Git integration. Vercel automatically comments the preview URL on the PR; Hermes shares that URL in chat for mobile review.
-
-## Project setup
-
-1. Create a Vercel project from this repository.
-2. Enable the GitHub integration and select the repository.
-3. Set Production Branch to `main`.
-4. Confirm Preview Deployments are enabled for pull requests.
-5. Use `npm run build` as the build command and `dist` as the output directory (Vercel usually detects Vite automatically).
-
-Do not commit tokens. Keep Vercel/GitHub credentials in their respective account settings or secret stores.
+Build with `npm run build`. Rates are reference data for everyday estimates, not trading.
