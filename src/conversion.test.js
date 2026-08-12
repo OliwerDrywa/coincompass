@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { findMentalMethods, formatStep, mergeCurrencyCatalogs, normalizeAmountInput, selectFeaturedMethods } from './conversion.js'
+import { findMentalMethods, formatStep, mergeCurrencyCatalogs, normalizeAmountInput, selectFeaturedMethods, sortCurrencies } from './conversion.js'
 
 describe('mental conversion methods', () => {
   it('ranks an exact easy operation first', () => {
@@ -42,6 +42,11 @@ describe('mental conversion methods', () => {
       TWD: 'New Taiwan Dollar',
       HKD: 'Hong Kong Dollar',
     })
+  })
+
+  it('sorts dropdown currencies alphabetically by their currency names', () => {
+    expect(sortCurrencies({ TWD: 'New Taiwan Dollar', JPY: 'Japanese Yen', CNY: 'Chinese Renminbi Yuan' }))
+      .toEqual([['CNY', 'Chinese Renminbi Yuan'], ['JPY', 'Japanese Yen'], ['TWD', 'New Taiwan Dollar']])
   })
 
   it('returns separate easiest and lowest-error featured methods', () => {

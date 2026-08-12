@@ -39,6 +39,10 @@ export function mergeCurrencyCatalogs(currencies) {
   return { ...EXTRA_CURRENCIES, ...currencies }
 }
 
+export function sortCurrencies(currencies) {
+  return Object.entries(currencies).sort(([, nameA], [, nameB]) => nameA.localeCompare(nameB))
+}
+
 const LABELS = {
   times2: 'multiply by 2', divide2: 'divide by 2',
   times3: 'multiply by 3', divide3: 'divide by 3',

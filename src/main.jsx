@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { findMentalMethods, formatStep, mergeCurrencyCatalogs, normalizeAmountInput, selectFeaturedMethods } from './conversion.js'
+import { findMentalMethods, formatStep, mergeCurrencyCatalogs, normalizeAmountInput, selectFeaturedMethods, sortCurrencies } from './conversion.js'
 import './style.css'
 
 const FALLBACK_CURRENCIES = {
@@ -20,8 +20,9 @@ const savedPair = () => {
 const signedError = (method) => `${method.approxRate >= method.rate ? '+' : '−'}${method.errorPercent.toFixed(1)}%`
 
 function CurrencyPicker({ label, value, onChange, currencies }) {
+  const options = useMemo(() => sortCurrencies(currencies), [currencies])
   return <label className="picker"><span>{label}</span><select value={value} onChange={(event) => onChange(event.target.value)}>
-    {Object.entries(currencies).map(([code, name]) => <option key={code} value={code} title={name}>{code}</option>)}
+    {options.map(([code, name]) => <option key={code} value={code} title={name}>{code} — {name}</option>)}
   </select></label>
 }
 
