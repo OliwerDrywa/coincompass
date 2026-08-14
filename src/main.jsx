@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { filterCurrencies, findMentalMethods, formatStep, mergeCurrencyCatalogs, normalizeAmountInput, scrollIntoViewForKeyboard, selectFeaturedMethods, toCurrencyCatalog, updateRecentCurrencies } from './conversion.js'
 import './style.css'
@@ -30,6 +30,15 @@ const signedError = (method) => `${method.approxRate >= method.rate ? '+' : '−
 function CurrencyPicker({ label, value, onChange, currencies, pinnedCurrencies, recentCurrencies, onTogglePin }) {
   const [isOpen, setIsOpen] = useState(false)
   const [query, setQuery] = useState('')
+  const pickerRef = useRef(null)
+  useEffect(() => {
+    if (!isOpen) return undefined
+    const closeOnOutsidePointer = (event) => {
+      if (!pickerRef.current?.contains(event.target)) setIsOpen(false)
+    }
+    document.addEventListener('pointerdown', closeOnOutsidePointer)
+    return () => document.removeEventListener('pointerdown', closeOnOutsidePointer)
+  }, [isOpen])
   const matchingCurrencies = useMemo(() => filterCurrencies(currencies, query), [currencies, query])
   const priorityCurrencies = useMemo(() => [...new Set([...pinnedCurrencies, ...recentCurrencies])]
     .map((code) => [code, currencies[code]])
@@ -39,7 +48,7 @@ function CurrencyPicker({ label, value, onChange, currencies, pinnedCurrencies, 
     setQuery('')
     setIsOpen(false)
   }
-  return <div className="picker">
+  return <div className="picker" ref={pickerRef}>
     <span id={`${label}-currency-label`}>{label}</span>
     <button className="picker-trigger" type="button" onClick={() => setIsOpen((open) => !open)} aria-expanded={isOpen} aria-haspopup="dialog" aria-labelledby={`${label}-currency-label`}>
       <b>{value}</b><span>{currencies[value]}</span><i aria-hidden="true">⌄</i>
