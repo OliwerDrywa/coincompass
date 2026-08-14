@@ -59,7 +59,14 @@ export function updateRecentCurrencies(recentCurrencies, currency) {
 }
 
 export function scrollIntoViewForKeyboard(element) {
-  setTimeout(() => element?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' }), 0)
+  setTimeout(() => {
+    if (!element) return
+    const window = element.ownerDocument?.defaultView
+    const visibleHeight = window?.visualViewport?.height || window?.innerHeight
+    if (!window || !visibleHeight) return
+    const desiredTop = visibleHeight * 0.35
+    window.scrollBy({ behavior: 'smooth', top: element.getBoundingClientRect().top - desiredTop })
+  }, 150)
 }
 
 const LABELS = {

@@ -73,13 +73,16 @@ describe('mental conversion methods', () => {
       .toEqual(['PLN', 'EUR', 'USD', 'JPY', 'GBP'])
   })
 
-  it('scrolls a picker search input into the keyboard-safe viewport after focus', () => {
-    const scrollIntoView = vi.fn()
-    const input = { scrollIntoView }
+  it('positions a picker search input 35% down the keyboard-safe viewport after focus', () => {
+    const scrollBy = vi.fn()
+    const input = {
+      getBoundingClientRect: () => ({ top: 620 }),
+      ownerDocument: { defaultView: { innerHeight: 1000, scrollBy, visualViewport: { height: 800 } } },
+    }
     scrollIntoViewForKeyboard(input)
-    expect(scrollIntoView).not.toHaveBeenCalled()
-    vi.runAllTimers()
-    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'center', inline: 'nearest' })
+    expect(scrollBy).not.toHaveBeenCalled()
+    vi.advanceTimersByTime(150)
+    expect(scrollBy).toHaveBeenCalledWith({ behavior: 'smooth', top: 340 })
   })
 
   it('returns separate easiest and lowest-error featured methods', () => {
