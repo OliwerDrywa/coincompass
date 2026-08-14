@@ -59,7 +59,7 @@ export function updateRecentCurrencies(recentCurrencies, currency) {
 }
 
 export function scrollIntoViewForKeyboard(element) {
-  setTimeout(() => element?.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' }), 0)
+  setTimeout(() => element?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' }), 0)
 }
 
 const LABELS = {

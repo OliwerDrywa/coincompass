@@ -79,7 +79,7 @@ describe('mental conversion methods', () => {
     scrollIntoViewForKeyboard(input)
     expect(scrollIntoView).not.toHaveBeenCalled()
     vi.runAllTimers()
-    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start', inline: 'nearest' })
+    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'center', inline: 'nearest' })
   })
 
   it('returns separate easiest and lowest-error featured methods', () => {
