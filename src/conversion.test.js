@@ -1,7 +1,10 @@
-import { describe, expect, it } from 'vitest'
-import { findMentalMethods, formatStep, mergeCurrencyCatalogs, normalizeAmountInput, selectFeaturedMethods, sortCurrencies, toCurrencyCatalog } from './conversion.js'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { filterCurrencies, findMentalMethods, formatStep, mergeCurrencyCatalogs, normalizeAmountInput, scrollIntoViewForKeyboard, selectFeaturedMethods, sortCurrencies, toCurrencyCatalog, updateRecentCurrencies } from './conversion.js'
 
 describe('mental conversion methods', () => {
+  beforeEach(() => vi.useFakeTimers())
+  afterEach(() => vi.useRealTimers())
+
   it('ranks an exact easy operation first', () => {
     const [method] = findMentalMethods(4, 5)
     expect(method.approxRate).toBe(4)
@@ -49,9 +52,37 @@ describe('mental conversion methods', () => {
       .toEqual({ TWD: 'New Taiwan Dollar', JPY: 'Japanese Yen' })
   })
 
-  it('sorts dropdown currencies alphabetically by currency code', () => {
+  it('sorts currencies alphabetically by currency code', () => {
     expect(sortCurrencies({ TWD: 'New Taiwan Dollar', JPY: 'Japanese Yen', CNY: 'Chinese Renminbi Yuan' }))
       .toEqual([['CNY', 'Chinese Renminbi Yuan'], ['JPY', 'Japanese Yen'], ['TWD', 'New Taiwan Dollar']])
+  })
+
+  it('filters currencies by code or label without changing alphabetical order', () => {
+    const currencies = { USD: 'United States Dollar', AED: 'United Arab Emirates Dirham', EUR: 'Euro' }
+    expect(filterCurrencies(currencies, 'uni')).toEqual([
+      ['AED', 'United Arab Emirates Dirham'],
+      ['USD', 'United States Dollar'],
+    ])
+    expect(filterCurrencies(currencies, 'eu')).toEqual([['EUR', 'Euro']])
+  })
+
+  it('puts a selected currency first in a capped recent history without duplicates', () => {
+    expect(updateRecentCurrencies(['EUR', 'USD', 'JPY', 'GBP', 'CHF'], 'USD'))
+      .toEqual(['USD', 'EUR', 'JPY', 'GBP', 'CHF'])
+    expect(updateRecentCurrencies(['EUR', 'USD', 'JPY', 'GBP', 'CHF'], 'PLN'))
+      .toEqual(['PLN', 'EUR', 'USD', 'JPY', 'GBP'])
+  })
+
+  it('positions a picker search input 35% down the keyboard-safe viewport after focus', () => {
+    const scrollBy = vi.fn()
+    const input = {
+      getBoundingClientRect: () => ({ top: 620 }),
+      ownerDocument: { defaultView: { innerHeight: 1000, scrollBy, visualViewport: { height: 800 } } },
+    }
+    scrollIntoViewForKeyboard(input)
+    expect(scrollBy).not.toHaveBeenCalled()
+    vi.advanceTimersByTime(150)
+    expect(scrollBy).toHaveBeenCalledWith({ behavior: 'smooth', top: 340 })
   })
 
   it('returns separate easiest and lowest-error featured methods', () => {
