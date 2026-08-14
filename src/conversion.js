@@ -47,6 +47,17 @@ export function sortCurrencies(currencies) {
   return Object.entries(currencies).sort(([codeA], [codeB]) => codeA.localeCompare(codeB))
 }
 
+export function filterCurrencies(currencies, query) {
+  const normalizedQuery = query.trim().toLocaleLowerCase()
+  return sortCurrencies(currencies).filter(([code, name]) => !normalizedQuery
+    || code.toLocaleLowerCase().includes(normalizedQuery)
+    || name.toLocaleLowerCase().includes(normalizedQuery))
+}
+
+export function updateRecentCurrencies(recentCurrencies, currency) {
+  return [currency, ...recentCurrencies.filter((item) => item !== currency)].slice(0, 5)
+}
+
 const LABELS = {
   times2: 'multiply by 2', divide2: 'divide by 2',
   times3: 'multiply by 3', divide3: 'divide by 3',

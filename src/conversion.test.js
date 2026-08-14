@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { findMentalMethods, formatStep, mergeCurrencyCatalogs, normalizeAmountInput, selectFeaturedMethods, sortCurrencies, toCurrencyCatalog } from './conversion.js'
+import { filterCurrencies, findMentalMethods, formatStep, mergeCurrencyCatalogs, normalizeAmountInput, selectFeaturedMethods, sortCurrencies, toCurrencyCatalog, updateRecentCurrencies } from './conversion.js'
 
 describe('mental conversion methods', () => {
   it('ranks an exact easy operation first', () => {
@@ -49,9 +49,25 @@ describe('mental conversion methods', () => {
       .toEqual({ TWD: 'New Taiwan Dollar', JPY: 'Japanese Yen' })
   })
 
-  it('sorts dropdown currencies alphabetically by currency code', () => {
+  it('sorts currencies alphabetically by currency code', () => {
     expect(sortCurrencies({ TWD: 'New Taiwan Dollar', JPY: 'Japanese Yen', CNY: 'Chinese Renminbi Yuan' }))
       .toEqual([['CNY', 'Chinese Renminbi Yuan'], ['JPY', 'Japanese Yen'], ['TWD', 'New Taiwan Dollar']])
+  })
+
+  it('filters currencies by code or label without changing alphabetical order', () => {
+    const currencies = { USD: 'United States Dollar', AED: 'United Arab Emirates Dirham', EUR: 'Euro' }
+    expect(filterCurrencies(currencies, 'uni')).toEqual([
+      ['AED', 'United Arab Emirates Dirham'],
+      ['USD', 'United States Dollar'],
+    ])
+    expect(filterCurrencies(currencies, 'eu')).toEqual([['EUR', 'Euro']])
+  })
+
+  it('puts a selected currency first in a capped recent history without duplicates', () => {
+    expect(updateRecentCurrencies(['EUR', 'USD', 'JPY', 'GBP', 'CHF'], 'USD'))
+      .toEqual(['USD', 'EUR', 'JPY', 'GBP', 'CHF'])
+    expect(updateRecentCurrencies(['EUR', 'USD', 'JPY', 'GBP', 'CHF'], 'PLN'))
+      .toEqual(['PLN', 'EUR', 'USD', 'JPY', 'GBP'])
   })
 
   it('returns separate easiest and lowest-error featured methods', () => {

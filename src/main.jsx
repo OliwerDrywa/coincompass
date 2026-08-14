@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { findMentalMethods, formatStep, mergeCurrencyCatalogs, normalizeAmountInput, selectFeaturedMethods, sortCurrencies, toCurrencyCatalog } from './conversion.js'
+import { filterCurrencies, findMentalMethods, formatStep, mergeCurrencyCatalogs, normalizeAmountInput, selectFeaturedMethods, toCurrencyCatalog, updateRecentCurrencies } from './conversion.js'
 import './style.css'
 
 const FALLBACK_CURRENCIES = {
@@ -13,17 +13,55 @@ const FALLBACK_CURRENCIES = {
   SGD: 'Singapore Dollar', THB: 'Thai Baht', TRY: 'Turkish Lira', USD: 'United States Dollar', ZAR: 'South African Rand',
 }
 const PAIR_KEY = 'coincompass-last-currency-pair'
+const PINS_KEY = 'coincompass-pinned-currencies'
+const RECENTS_KEY = 'coincompass-recent-currencies'
 const SYMBOLS = { EUR: '€', USD: '$', GBP: '£', JPY: '¥', PLN: 'zł', CHF: 'Fr', CNY: '¥', INR: '₹', KRW: '₩' }
+const getStoredArray = (key) => {
+  try {
+    const value = JSON.parse(localStorage.getItem(key))
+    return Array.isArray(value) ? value.filter((item) => typeof item === 'string') : []
+  } catch { return [] }
+}
 const savedPair = () => {
   try { return JSON.parse(localStorage.getItem(PAIR_KEY)) || {} } catch { return {} }
 }
 const signedError = (method) => `${method.approxRate >= method.rate ? '+' : '−'}${method.errorPercent.toFixed(1)}%`
 
-function CurrencyPicker({ label, value, onChange, currencies }) {
-  const options = useMemo(() => sortCurrencies(currencies), [currencies])
-  return <label className="picker"><span>{label}</span><select value={value} onChange={(event) => onChange(event.target.value)}>
-    {options.map(([code, name]) => <option key={code} value={code} title={name}>{code} — {name}</option>)}
-  </select></label>
+function CurrencyPicker({ label, value, onChange, currencies, pinnedCurrencies, recentCurrencies, onTogglePin }) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const matchingCurrencies = useMemo(() => filterCurrencies(currencies, query), [currencies, query])
+  const priorityCurrencies = useMemo(() => [...new Set([...pinnedCurrencies, ...recentCurrencies])]
+    .map((code) => [code, currencies[code]])
+    .filter(([code, name]) => name && (!query || filterCurrencies({ [code]: name }, query).length)), [currencies, pinnedCurrencies, query, recentCurrencies])
+  const chooseCurrency = (code) => {
+    onChange(code)
+    setQuery('')
+    setIsOpen(false)
+  }
+  return <div className="picker">
+    <span id={`${label}-currency-label`}>{label}</span>
+    <button className="picker-trigger" type="button" onClick={() => setIsOpen((open) => !open)} aria-expanded={isOpen} aria-haspopup="dialog" aria-labelledby={`${label}-currency-label`}>
+      <b>{value}</b><span>{currencies[value]}</span><i aria-hidden="true">⌄</i>
+    </button>
+    {isOpen && <section className="currency-popover" role="dialog" aria-label={`Choose ${label.toLowerCase()} currency`}>
+      <label className="currency-search"><span className="sr-only">Search currencies</span><i aria-hidden="true">⌕</i><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search code or currency" /></label>
+      <div className="currency-scroll" role="listbox" aria-label="Currencies">
+        {priorityCurrencies.length > 0 && <><p className="currency-section-title">Pinned & recent</p>{priorityCurrencies.map(([code, name]) => <CurrencyOption key={`priority-${code}`} code={code} name={name} pinned={pinnedCurrencies.includes(code)} selected={value === code} onChoose={chooseCurrency} onTogglePin={onTogglePin}/>)}</>}
+        {priorityCurrencies.length > 0 && <div className="currency-separator" />}
+        <p className="currency-section-title">All currencies</p>
+        {matchingCurrencies.map(([code, name]) => <CurrencyOption key={code} code={code} name={name} pinned={pinnedCurrencies.includes(code)} selected={value === code} onChoose={chooseCurrency} onTogglePin={onTogglePin}/>) }
+        {matchingCurrencies.length === 0 && <p className="currency-empty">No currencies found.</p>}
+      </div>
+    </section>}
+  </div>
+}
+
+function CurrencyOption({ code, name, pinned, selected, onChoose, onTogglePin }) {
+  return <div className="currency-option" role="option" aria-selected={selected}>
+    <button className="currency-choice" type="button" onClick={() => onChoose(code)}><b>{code}</b><span>{name}</span>{selected && <i aria-label="Selected">✓</i>}</button>
+    <button className={`pin-button ${pinned ? 'is-pinned' : ''}`} type="button" onClick={() => onTogglePin(code)} aria-label={`${pinned ? 'Unpin' : 'Pin'} ${code}`} aria-pressed={pinned}>{pinned ? '★' : '☆'}</button>
+  </div>
 }
 
 function MethodCard({ method, label, amount, exactValue, target, highlight }) {
@@ -41,6 +79,8 @@ function App() {
   const [currencies, setCurrencies] = useState(mergeCurrencyCatalogs(FALLBACK_CURRENCIES))
   const [source, setSource] = useState(remembered.source || 'EUR')
   const [target, setTarget] = useState(remembered.target || 'PLN')
+  const [pinnedCurrencies, setPinnedCurrencies] = useState(() => getStoredArray(PINS_KEY))
+  const [recentCurrencies, setRecentCurrencies] = useState(() => getStoredArray(RECENTS_KEY).slice(0, 5))
   const [amountText, setAmountText] = useState('20')
   const [rate, setRate] = useState(null)
   const [date, setDate] = useState('')
@@ -48,6 +88,13 @@ function App() {
 
   useEffect(() => { fetch('https://api.frankfurter.dev/v2/currencies').then((response) => response.ok ? response.json() : Promise.reject()).then((catalog) => setCurrencies(mergeCurrencyCatalogs(toCurrencyCatalog(catalog)))).catch(() => {}) }, [])
   useEffect(() => { try { localStorage.setItem(PAIR_KEY, JSON.stringify({ source, target })) } catch {} }, [source, target])
+  useEffect(() => { try { localStorage.setItem(PINS_KEY, JSON.stringify(pinnedCurrencies)) } catch {} }, [pinnedCurrencies])
+  useEffect(() => { try { localStorage.setItem(RECENTS_KEY, JSON.stringify(recentCurrencies)) } catch {} }, [recentCurrencies])
+  const selectCurrency = (setter) => (currency) => {
+    setter(currency)
+    setRecentCurrencies((current) => updateRecentCurrencies(current, currency))
+  }
+  const togglePin = (currency) => setPinnedCurrencies((current) => current.includes(currency) ? current.filter((item) => item !== currency) : [...current, currency])
   useEffect(() => {
     if (source === target) { setRate(1); setStatus('ready'); setDate('Today'); return }
     setStatus('loading')
@@ -69,7 +116,7 @@ function App() {
       <div className="hero-copy"><p className="kicker">Your currency pal</p><h1>Prices, made<br /><em>friendly.</em></h1><p className="intro">A quick way to turn foreign prices into simple, memorable maths.</p></div>
       <div className="converter">
         <div className="amount-wrap"><label htmlFor="amount">Price</label><div><span>{SYMBOLS[source] || source}</span><input id="amount" inputMode="decimal" value={amountText} onChange={(event) => setAmountText(normalizeAmountInput(event.target.value.replace(/[^0-9.]/g, '')))} /></div></div>
-        <div className="currency-row"><CurrencyPicker label="From" value={source} onChange={setSource} currencies={currencies}/><button className="swap" onClick={() => { setSource(target); setTarget(source) }} aria-label="Swap currencies">⇄</button><CurrencyPicker label="To" value={target} onChange={setTarget} currencies={currencies}/></div>
+        <div className="currency-row"><CurrencyPicker label="From" value={source} onChange={selectCurrency(setSource)} currencies={currencies} pinnedCurrencies={pinnedCurrencies} recentCurrencies={recentCurrencies} onTogglePin={togglePin}/><button className="swap" onClick={() => { setSource(target); setTarget(source) }} aria-label="Swap currencies">⇄</button><CurrencyPicker label="To" value={target} onChange={selectCurrency(setTarget)} currencies={currencies} pinnedCurrencies={pinnedCurrencies} recentCurrencies={recentCurrencies} onTogglePin={togglePin}/></div>
         <div className="market-rate"><span><i className={status}></i>{status === 'error' ? 'Rate unavailable' : status === 'loading' ? 'Getting live rate…' : `1 ${source} = ${rate.toLocaleString(undefined, { maximumFractionDigits: 5 })} ${target}`}</span><small>{date && `ECB · ${date}`}</small></div>
       </div>
     </section>
