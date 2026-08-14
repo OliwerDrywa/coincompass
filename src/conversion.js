@@ -58,6 +58,10 @@ export function updateRecentCurrencies(recentCurrencies, currency) {
   return [currency, ...recentCurrencies.filter((item) => item !== currency)].slice(0, 5)
 }
 
+export function scrollIntoViewForKeyboard(element) {
+  setTimeout(() => element?.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' }), 0)
+}
+
 const LABELS = {
   times2: 'multiply by 2', divide2: 'divide by 2',
   times3: 'multiply by 3', divide3: 'divide by 3',

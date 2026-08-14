@@ -1,7 +1,10 @@
-import { describe, expect, it } from 'vitest'
-import { filterCurrencies, findMentalMethods, formatStep, mergeCurrencyCatalogs, normalizeAmountInput, selectFeaturedMethods, sortCurrencies, toCurrencyCatalog, updateRecentCurrencies } from './conversion.js'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { filterCurrencies, findMentalMethods, formatStep, mergeCurrencyCatalogs, normalizeAmountInput, scrollIntoViewForKeyboard, selectFeaturedMethods, sortCurrencies, toCurrencyCatalog, updateRecentCurrencies } from './conversion.js'
 
 describe('mental conversion methods', () => {
+  beforeEach(() => vi.useFakeTimers())
+  afterEach(() => vi.useRealTimers())
+
   it('ranks an exact easy operation first', () => {
     const [method] = findMentalMethods(4, 5)
     expect(method.approxRate).toBe(4)
@@ -68,6 +71,15 @@ describe('mental conversion methods', () => {
       .toEqual(['USD', 'EUR', 'JPY', 'GBP', 'CHF'])
     expect(updateRecentCurrencies(['EUR', 'USD', 'JPY', 'GBP', 'CHF'], 'PLN'))
       .toEqual(['PLN', 'EUR', 'USD', 'JPY', 'GBP'])
+  })
+
+  it('scrolls a picker search input into the keyboard-safe viewport after focus', () => {
+    const scrollIntoView = vi.fn()
+    const input = { scrollIntoView }
+    scrollIntoViewForKeyboard(input)
+    expect(scrollIntoView).not.toHaveBeenCalled()
+    vi.runAllTimers()
+    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start', inline: 'nearest' })
   })
 
   it('returns separate easiest and lowest-error featured methods', () => {

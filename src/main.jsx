@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { filterCurrencies, findMentalMethods, formatStep, mergeCurrencyCatalogs, normalizeAmountInput, selectFeaturedMethods, toCurrencyCatalog, updateRecentCurrencies } from './conversion.js'
+import { filterCurrencies, findMentalMethods, formatStep, mergeCurrencyCatalogs, normalizeAmountInput, scrollIntoViewForKeyboard, selectFeaturedMethods, toCurrencyCatalog, updateRecentCurrencies } from './conversion.js'
 import './style.css'
 
 const FALLBACK_CURRENCIES = {
@@ -45,7 +45,7 @@ function CurrencyPicker({ label, value, onChange, currencies, pinnedCurrencies, 
       <b>{value}</b><span>{currencies[value]}</span><i aria-hidden="true">⌄</i>
     </button>
     {isOpen && <section className="currency-popover" role="dialog" aria-label={`Choose ${label.toLowerCase()} currency`}>
-      <label className="currency-search"><span className="sr-only">Search currencies</span><i aria-hidden="true">⌕</i><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search code or currency" /></label>
+      <label className="currency-search"><span className="sr-only">Search currencies</span><i aria-hidden="true">⌕</i><input id={`${label}-currency-search`} autoFocus value={query} onFocus={(event) => scrollIntoViewForKeyboard(event.currentTarget)} onChange={(event) => setQuery(event.target.value)} placeholder="Search code or currency" /></label>
       <div className="currency-scroll" role="listbox" aria-label="Currencies">
         {priorityCurrencies.length > 0 && <><p className="currency-section-title">Pinned & recent</p>{priorityCurrencies.map(([code, name]) => <CurrencyOption key={`priority-${code}`} code={code} name={name} pinned={pinnedCurrencies.includes(code)} selected={value === code} onChoose={chooseCurrency} onTogglePin={onTogglePin}/>)}</>}
         {priorityCurrencies.length > 0 && <div className="currency-separator" />}
