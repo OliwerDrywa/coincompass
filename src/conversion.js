@@ -89,6 +89,19 @@ export function formatStep(step) {
   return LABELS[step.id]
 }
 
+const rateCacheKey = (source, target) => `coincompass-rate-${source}-${target}`
+
+export function getCachedRate(storage, source, target) {
+  try {
+    const cached = JSON.parse(storage.getItem(rateCacheKey(source, target)))
+    return Number.isFinite(cached?.rate) && typeof cached.date === 'string' ? cached : null
+  } catch { return null }
+}
+
+export function saveCachedRate(storage, source, target, rate) {
+  try { storage.setItem(rateCacheKey(source, target), JSON.stringify(rate)) } catch {}
+}
+
 export function normalizeAmountInput(value) {
   if (value === '') return ''
   const [whole, decimal] = value.split('.')
