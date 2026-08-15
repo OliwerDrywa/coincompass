@@ -218,6 +218,6 @@ describe("mental conversion methods", () => {
 
     expect(html).toContain('rel="manifest"');
     expect(manifest).toContain('"display": "standalone"');
-    expect(worker).toContain("self.addEventListener('fetch'");
+    expect(worker).toMatch(/self\.addEventListener\(["']fetch["']/);
   });
 });
