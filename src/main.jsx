@@ -502,7 +502,7 @@ function App() {
                 ? "Rate unavailable — connect once to save this pair"
                 : status === "loading"
                   ? "Getting live rate…"
-                  : `1 ${source} ≈ ${rate.toLocaleString(undefined, { maximumFractionDigits: 5 })} ${target}`}
+                  : `1 ${source} = ${rate.toLocaleString(undefined, { maximumFractionDigits: 5 })} ${target}`}
             </span>
             <small className="text-right text-[#72756f]">
               {date &&
@@ -518,7 +518,7 @@ function App() {
           </p>
           <h2 className="m-0 mt-[15px] text-[clamp(34px,4vw,64px)] leading-[.95] font-bold tracking-[-.055em] min-[561px]:mt-0">
             {rate
-              ? `${SYMBOLS[source] || ""}${amount} ≈ ${SYMBOLS[target] || ""}${exactValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+              ? `${SYMBOLS[source] || ""}${amount} = ${SYMBOLS[target] || ""}${exactValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
               : "Finding shortcuts…"}
           </h2>
         </div>
