@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import type { StorageLike } from "./conversion.ts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   filterCurrencies,
@@ -14,10 +15,10 @@ import {
   sortCurrencies,
   toCurrencyCatalog,
   updateRecentCurrencies,
-} from "./conversion.js";
+} from "./conversion.ts";
 
 const styles = readFileSync(new URL("./style.css", import.meta.url), "utf8");
-const app = readFileSync(new URL("./main.jsx", import.meta.url), "utf8");
+const app = readFileSync(new URL("./main.tsx", import.meta.url), "utf8");
 const packageJson = readFileSync(
   new URL("../package.json", import.meta.url),
   "utf8",
@@ -133,10 +134,14 @@ describe("mental conversion methods", () => {
   });
 
   it("uses equals signs for live conversion results", () => {
-    expect(app).toContain("`1 ${source} = ${rate.toLocaleString");
-    expect(app).toContain("`${SYMBOLS[source] || \"\"}${amount} = ${SYMBOLS[target] || \"\"}${exactValue.toLocaleString");
-    expect(app).not.toContain("`1 ${source} ≈ ${rate.toLocaleString");
-    expect(app).not.toContain("`${SYMBOLS[source] || \"\"}${amount} ≈ ${SYMBOLS[target] || \"\"}${exactValue.toLocaleString");
+    expect(app).toContain("`1 ${source} = ${");
+    expect(app).toContain(
+      '`${SYMBOLS[source] || ""}${amount} = ${SYMBOLS[target] || ""}${exactValue.toLocaleString',
+    );
+    expect(app).not.toContain("`1 ${source} ≈ ${");
+    expect(app).not.toContain(
+      '`${SYMBOLS[source] || ""}${amount} ≈ ${SYMBOLS[target] || ""}${exactValue.toLocaleString',
+    );
   });
 
   it("shows a green indicator for ready and cached rates", () => {
@@ -171,12 +176,28 @@ describe("mental conversion methods", () => {
     const featured = selectFeaturedMethods(findMentalMethods(0.86, 12));
     expect(featured.easiest).toBeDefined();
     expect(featured.lowestError).toBeDefined();
-    expect(featured.easiest.effort).toBeLessThanOrEqual(
-      featured.lowestError.effort,
+    expect(featured.easiest?.effort).toBeLessThanOrEqual(
+      featured.lowestError?.effort ?? Infinity,
     );
-    expect(featured.lowestError.errorPercent).toBeLessThanOrEqual(
-      featured.easiest.errorPercent,
+    expect(featured.lowestError?.errorPercent).toBeLessThanOrEqual(
+      featured.easiest?.errorPercent ?? Infinity,
     );
+  });
+
+  it("handles empty method collections and rejects invalid rates", () => {
+    expect(selectFeaturedMethods([])).toEqual({
+      easiest: null,
+      lowestError: null,
+    });
+    expect(findMentalMethods(0)).toEqual([]);
+    expect(findMentalMethods(-1)).toEqual([]);
+    expect(findMentalMethods(Number.NaN)).toEqual([]);
+  });
+
+  it("preserves empty amounts and covers every rate-indicator state", () => {
+    expect(normalizeAmountInput("")).toBe("");
+    expect(rateIndicatorClass("ready")).toBe("bg-[#1c9c53]");
+    expect(rateIndicatorClass("cached")).toBe("bg-[#1c9c53]");
   });
 
   it("supports large place-value shifts as one harder step", () => {
@@ -201,9 +222,11 @@ describe("mental conversion methods", () => {
 
   it("returns a cached rate for the selected currency pair", () => {
     const storage = new Map();
-    const cache = {
+    const cache: StorageLike = {
       getItem: (key) => storage.get(key) ?? null,
-      setItem: (key, value) => storage.set(key, value),
+      setItem: (key, value) => {
+        storage.set(key, value);
+      },
     };
 
     saveCachedRate(cache, "EUR", "PLN", { rate: 4.25, date: "2026-08-14" });

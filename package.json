@@ -7,16 +7,23 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "coverage": "vitest run --coverage"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^26.2.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "latest",
+    "@vitest/coverage-v8": "^4.1.10",
     "prettier": "^3.9.6",
     "prettier-plugin-tailwindcss": "^0.8.1",
     "react": "latest",
     "react-dom": "latest",
     "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2",
     "vite": "latest",
     "vitest": "^4.1.10"
   }

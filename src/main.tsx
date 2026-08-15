@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import type { Dispatch, SetStateAction } from "react";
 import { createRoot } from "react-dom/client";
 import {
   filterCurrencies,
@@ -13,10 +14,18 @@ import {
   selectFeaturedMethods,
   toCurrencyCatalog,
   updateRecentCurrencies,
-} from "./conversion.js";
+} from "./conversion.ts";
 import "./style.css";
+import type {
+  CachedRate,
+  CurrencyApiResponse,
+  CurrencyCatalog,
+  CurrencyCode,
+  MentalMethod,
+  RateStatus,
+} from "./conversion.ts";
 
-const FALLBACK_CURRENCIES = {
+const FALLBACK_CURRENCIES: CurrencyCatalog = {
   AUD: "Australian Dollar",
   BRL: "Brazilian Real",
   CAD: "Canadian Dollar",
@@ -50,7 +59,7 @@ const FALLBACK_CURRENCIES = {
 const PAIR_KEY = "coincompass-last-currency-pair";
 const PINS_KEY = "coincompass-pinned-currencies";
 const RECENTS_KEY = "coincompass-recent-currencies";
-const SYMBOLS = {
+const SYMBOLS: Record<CurrencyCode, string> = {
   EUR: "€",
   USD: "$",
   GBP: "£",
@@ -61,9 +70,9 @@ const SYMBOLS = {
   INR: "₹",
   KRW: "₩",
 };
-const getStoredArray = (key) => {
+const getStoredArray = (key: string): CurrencyCode[] => {
   try {
-    const value = JSON.parse(localStorage.getItem(key));
+    const value = JSON.parse(localStorage.getItem(key) ?? "[]");
     return Array.isArray(value)
       ? value.filter((item) => typeof item === "string")
       : [];
@@ -71,15 +80,29 @@ const getStoredArray = (key) => {
     return [];
   }
 };
-const savedPair = () => {
+const savedPair = (): Partial<{
+  source: CurrencyCode;
+  target: CurrencyCode;
+}> => {
   try {
-    return JSON.parse(localStorage.getItem(PAIR_KEY)) || {};
+    return JSON.parse(localStorage.getItem(PAIR_KEY) ?? "{}");
   } catch {
     return {};
   }
 };
-const signedError = (method) =>
+type DisplayMentalMethod = MentalMethod & { rate: number };
+const signedError = (method: DisplayMentalMethod) =>
   `${method.approxRate >= method.rate ? "+" : "−"}${method.errorPercent.toFixed(1)}%`;
+
+type CurrencyPickerProps = {
+  label: string;
+  value: CurrencyCode;
+  onChange: (currency: CurrencyCode) => void;
+  currencies: CurrencyCatalog;
+  pinnedCurrencies: CurrencyCode[];
+  recentCurrencies: CurrencyCode[];
+  onTogglePin: (currency: CurrencyCode) => void;
+};
 
 function CurrencyPicker({
   label,
@@ -89,14 +112,18 @@ function CurrencyPicker({
   pinnedCurrencies,
   recentCurrencies,
   onTogglePin,
-}) {
+}: CurrencyPickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const pickerRef = useRef(null);
+  const pickerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!isOpen) return undefined;
-    const closeOnOutsidePointer = (event) => {
-      if (!pickerRef.current?.contains(event.target)) setIsOpen(false);
+    const closeOnOutsidePointer = (event: PointerEvent) => {
+      if (
+        !(event.target instanceof Node) ||
+        !pickerRef.current?.contains(event.target)
+      )
+        setIsOpen(false);
     };
     document.addEventListener("pointerdown", closeOnOutsidePointer);
     return () =>
@@ -108,16 +135,18 @@ function CurrencyPicker({
   );
   const priorityCurrencies = useMemo(
     () =>
-      [...new Set([...pinnedCurrencies, ...recentCurrencies])]
-        .map((code) => [code, currencies[code]])
-        .filter(
-          ([code, name]) =>
-            name &&
-            (!query || filterCurrencies({ [code]: name }, query).length),
-        ),
+      [...new Set([...pinnedCurrencies, ...recentCurrencies])].flatMap(
+        (code) => {
+          const name = currencies[code];
+          return name &&
+            (!query || filterCurrencies({ [code]: name }, query).length)
+            ? ([[code, name]] as const)
+            : [];
+        },
+      ),
     [currencies, pinnedCurrencies, query, recentCurrencies],
   );
-  const chooseCurrency = (code) => {
+  const chooseCurrency = (code: CurrencyCode): void => {
     onChange(code);
     setQuery("");
     setIsOpen(false);
@@ -166,10 +195,12 @@ function CurrencyPicker({
               id={`${label}-currency-search`}
               autoFocus
               value={query}
-              onFocus={(event) =>
+              onFocus={(event: React.FocusEvent<HTMLInputElement>) =>
                 scrollIntoViewForKeyboard(event.currentTarget)
               }
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
+                setQuery(event.target.value)
+              }
               placeholder="Search code or currency"
               className="w-full min-w-0 border-0 bg-transparent py-[11px] text-sm outline-0"
             />
@@ -226,6 +257,15 @@ function CurrencyPicker({
   );
 }
 
+type CurrencyOptionProps = {
+  code: CurrencyCode;
+  name: string;
+  pinned: boolean;
+  selected: boolean;
+  onChoose: (currency: CurrencyCode) => void;
+  onTogglePin: (currency: CurrencyCode) => void;
+};
+
 function CurrencyOption({
   code,
   name,
@@ -233,7 +273,7 @@ function CurrencyOption({
   selected,
   onChoose,
   onTogglePin,
-}) {
+}: CurrencyOptionProps) {
   return (
     <div
       className="grid grid-cols-[minmax(0,1fr)_auto] items-center rounded-[9px] hover:bg-[#e2f6d5]"
@@ -268,7 +308,21 @@ function CurrencyOption({
   );
 }
 
-function MethodCard({ method, label, amount, target, highlight }) {
+type MethodCardProps = {
+  method: DisplayMentalMethod;
+  label: string;
+  amount: number;
+  target: CurrencyCode;
+  highlight?: boolean;
+};
+
+function MethodCard({
+  method,
+  label,
+  amount,
+  target,
+  highlight = false,
+}: MethodCardProps) {
   const mentalValue = amount * method.approxRate;
   return (
     <article
@@ -314,11 +368,15 @@ function MethodCard({ method, label, amount, target, highlight }) {
 
 function App() {
   const remembered = savedPair();
-  const [currencies, setCurrencies] = useState(
+  const [currencies, setCurrencies] = useState<CurrencyCatalog>(
     mergeCurrencyCatalogs(FALLBACK_CURRENCIES),
   );
-  const [source, setSource] = useState(remembered.source || "EUR");
-  const [target, setTarget] = useState(remembered.target || "PLN");
+  const [source, setSource] = useState<CurrencyCode>(
+    remembered.source || "EUR",
+  );
+  const [target, setTarget] = useState<CurrencyCode>(
+    remembered.target || "PLN",
+  );
   const [pinnedCurrencies, setPinnedCurrencies] = useState(() =>
     getStoredArray(PINS_KEY),
   );
@@ -326,13 +384,13 @@ function App() {
     getStoredArray(RECENTS_KEY).slice(0, 5),
   );
   const [amountText, setAmountText] = useState("20");
-  const [rate, setRate] = useState(null);
+  const [rate, setRate] = useState<number | null>(null);
   const [date, setDate] = useState("");
-  const [status, setStatus] = useState("loading");
+  const [status, setStatus] = useState<RateStatus>("loading");
   useEffect(() => {
     fetch("https://api.frankfurter.dev/v2/currencies")
       .then((response) => (response.ok ? response.json() : Promise.reject()))
-      .then((catalog) =>
+      .then((catalog: CurrencyApiResponse[]) =>
         setCurrencies(mergeCurrencyCatalogs(toCurrencyCatalog(catalog))),
       )
       .catch(() => {});
@@ -352,11 +410,15 @@ function App() {
       localStorage.setItem(RECENTS_KEY, JSON.stringify(recentCurrencies));
     } catch {}
   }, [recentCurrencies]);
-  const selectCurrency = (setter) => (currency) => {
-    setter(currency);
-    setRecentCurrencies((current) => updateRecentCurrencies(current, currency));
-  };
-  const togglePin = (currency) =>
+  const selectCurrency =
+    (setter: Dispatch<SetStateAction<CurrencyCode>>) =>
+    (currency: CurrencyCode): void => {
+      setter(currency);
+      setRecentCurrencies((current) =>
+        updateRecentCurrencies(current, currency),
+      );
+    };
+  const togglePin = (currency: CurrencyCode): void =>
     setPinnedCurrencies((current) =>
       current.includes(currency)
         ? current.filter((item) => item !== currency)
@@ -377,7 +439,7 @@ function App() {
     } else setStatus("loading");
     fetch(`https://api.frankfurter.dev/v2/rate/${source}/${target}`)
       .then((response) => (response.ok ? response.json() : Promise.reject()))
-      .then((data) => {
+      .then((data: CachedRate) => {
         saveCachedRate(localStorage, source, target, data);
         setRate(data.rate);
         setDate(data.date);
@@ -390,7 +452,7 @@ function App() {
   const amount = Number(amountText) || 0;
   const methods = useMemo(
     () =>
-      rate
+      rate !== null
         ? findMentalMethods(rate, 12).map((method) => ({ ...method, rate }))
         : [],
     [rate],
@@ -403,6 +465,8 @@ function App() {
     .filter((method) => method !== easiest && method !== lowestError)
     .slice(0, 1);
   const exactValue = amount * (rate || 0);
+  const rateDisplay =
+    rate?.toLocaleString(undefined, { maximumFractionDigits: 5 }) ?? "";
   return (
     <main className="overflow-hidden">
       <nav className="bg-paper flex h-16 items-center justify-between border-b border-[#0e0f0c22] px-[clamp(20px,5vw,74px)] min-[561px]:h-[76px]">
@@ -502,7 +566,7 @@ function App() {
                 ? "Rate unavailable — connect once to save this pair"
                 : status === "loading"
                   ? "Getting live rate…"
-                  : `1 ${source} = ${rate.toLocaleString(undefined, { maximumFractionDigits: 5 })} ${target}`}
+                  : `1 ${source} = ${rateDisplay} ${target}`}
             </span>
             <small className="text-right text-[#72756f]">
               {date &&
@@ -566,4 +630,6 @@ function App() {
   );
 }
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js");
-createRoot(document.getElementById("root")).render(<App />);
+const root = document.getElementById("root");
+if (!root) throw new Error("Missing root element");
+createRoot(root).render(<App />);
