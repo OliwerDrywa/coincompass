@@ -143,7 +143,7 @@ function CurrencyPicker({
           {currencies[value]}
         </span>
         <svg
-          className="size-4 self-center stroke-current stroke-2"
+          className={`size-4 self-center stroke-current stroke-2 transition-transform duration-200 ${isOpen ? "rotate-180" : "rotate-0"}`}
           viewBox="0 0 16 16"
           fill="none"
           aria-hidden="true"
