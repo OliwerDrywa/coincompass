@@ -132,6 +132,13 @@ describe("mental conversion methods", () => {
     expect(packageJson).toContain("prettier-plugin-tailwindcss");
   });
 
+  it("uses equals signs for live conversion results", () => {
+    expect(app).toContain("`1 ${source} = ${rate.toLocaleString");
+    expect(app).toContain("`${SYMBOLS[source] || \"\"}${amount} = ${SYMBOLS[target] || \"\"}${exactValue.toLocaleString");
+    expect(app).not.toContain("`1 ${source} ≈ ${rate.toLocaleString");
+    expect(app).not.toContain("`${SYMBOLS[source] || \"\"}${amount} ≈ ${SYMBOLS[target] || \"\"}${exactValue.toLocaleString");
+  });
+
   it("shows a green indicator for ready and cached rates", () => {
     expect(rateIndicatorClass("ready")).toBe("bg-[#1c9c53]");
     expect(rateIndicatorClass("cached")).toBe("bg-[#1c9c53]");

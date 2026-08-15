@@ -142,9 +142,14 @@ function CurrencyPicker({
         <span className="overflow-hidden text-xs text-ellipsis whitespace-nowrap text-[#5b5d58]">
           {currencies[value]}
         </span>
-        <i className="text-lg not-italic" aria-hidden="true">
-          ⌄
-        </i>
+        <svg
+          className={`size-4 self-center stroke-current stroke-2 transition-transform duration-200 ${isOpen ? "rotate-180" : "rotate-0"}`}
+          viewBox="0 0 16 16"
+          fill="none"
+          aria-hidden="true"
+        >
+          <path d="m4 6 4 4 4-4" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
       </button>
       {isOpen && (
         <section
@@ -263,7 +268,7 @@ function CurrencyOption({
   );
 }
 
-function MethodCard({ method, label, amount, exactValue, target, highlight }) {
+function MethodCard({ method, label, amount, target, highlight }) {
   const mentalValue = amount * method.approxRate;
   return (
     <article
@@ -297,18 +302,12 @@ function MethodCard({ method, label, amount, exactValue, target, highlight }) {
           </React.Fragment>
         ))}
       </div>
-      <div className="mt-[35px] flex items-end justify-between border-t border-[#0e0f0c44] pt-5">
-        <span className="font-mono text-[11px] uppercase">Head result</span>
+      <div className="mt-[35px] border-t border-[#0e0f0c44] pt-5 text-right">
         <strong className="text-[28px] tracking-[-.04em]">
           ≈ {SYMBOLS[target] || ""}
           {mentalValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}
         </strong>
       </div>
-      <small className="mt-2.5 text-right text-[#62655f]">
-        Live:{" "}
-        {(SYMBOLS[target] || "") +
-          exactValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-      </small>
     </article>
   );
 }
@@ -519,7 +518,7 @@ function App() {
           </p>
           <h2 className="m-0 mt-[15px] text-[clamp(34px,4vw,64px)] leading-[.95] font-bold tracking-[-.055em] min-[561px]:mt-0">
             {rate
-              ? `${SYMBOLS[source] || ""}${amount} ≈ ${SYMBOLS[target] || ""}${exactValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+              ? `${SYMBOLS[source] || ""}${amount} = ${SYMBOLS[target] || ""}${exactValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
               : "Finding shortcuts…"}
           </h2>
         </div>
@@ -530,7 +529,6 @@ function App() {
               label="Easiest"
               highlight
               amount={amount}
-              exactValue={exactValue}
               target={target}
             />
           )}{" "}
@@ -539,7 +537,6 @@ function App() {
               method={lowestError}
               label="Lowest error"
               amount={amount}
-              exactValue={exactValue}
               target={target}
             />
           )}{" "}
@@ -549,7 +546,6 @@ function App() {
               method={method}
               label="Alternative"
               amount={amount}
-              exactValue={exactValue}
               target={target}
             />
           ))}
