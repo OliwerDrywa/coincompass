@@ -29,6 +29,7 @@ h1 em { color: #337121; font-style: normal; }
 .picker-trigger span { overflow: hidden; color: #5b5d58; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 .picker-trigger i { font-size: 18px; font-style: normal; }
 .currency-popover { position: absolute; z-index: 5; top: calc(100% + 8px); left: 0; width: min(360px, calc(100vw - 40px)); padding: 12px; border: 1px solid #cfd3ca; border-radius: 18px; background: #fff; box-shadow: 0 18px 50px #0e0f0c24; }
+.currency-row .picker:last-child .currency-popover { left: auto; right: 0; }
 .currency-search { display: flex; align-items: center; gap: 8px; padding: 0 10px; border: 1px solid #bfc3b9; border-radius: 11px; background: #f4f5ef; }
 .currency-search i { color: #5b5d58; font-size: 20px; font-style: normal; }
 .currency-search input { width: 100%; min-width: 0; padding: 11px 0; border: 0; outline: 0; background: transparent; color: inherit; font-size: 14px; }
