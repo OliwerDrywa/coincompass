@@ -266,7 +266,7 @@ function MethodCard({ method, label, amount, exactValue, target, highlight }) {
   const mentalValue = amount * method.approxRate;
   return (
     <article
-      className={`bg-paper text-ink flex min-h-[290px] flex-col rounded-[27px] p-6 ${highlight ? "bg-lime -translate-y-2 max-[900px]:translate-y-0" : ""}`}
+      className={`text-ink flex min-h-[290px] flex-col rounded-[27px] p-6 ${highlight ? "bg-lime -translate-y-2 max-[900px]:translate-y-0" : "bg-paper"}`}
     >
       <header className="flex items-start justify-between gap-[15px]">
         <div>
