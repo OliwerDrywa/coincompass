@@ -10,9 +10,13 @@
     "test": "vitest run"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
     "@vitejs/plugin-react": "latest",
+    "prettier": "^3.9.6",
+    "prettier-plugin-tailwindcss": "^0.8.1",
     "react": "latest",
     "react-dom": "latest",
+    "tailwindcss": "^4.3.3",
     "vite": "latest",
     "vitest": "^4.1.10"
   }
