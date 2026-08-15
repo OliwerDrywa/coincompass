@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { filterCurrencies, findMentalMethods, formatStep, mergeCurrencyCatalogs, normalizeAmountInput, scrollIntoViewForKeyboard, selectFeaturedMethods, toCurrencyCatalog, updateRecentCurrencies } from './conversion.js'
+import { filterCurrencies, findMentalMethods, formatStep, getCachedRate, mergeCurrencyCatalogs, normalizeAmountInput, saveCachedRate, scrollIntoViewForKeyboard, selectFeaturedMethods, toCurrencyCatalog, updateRecentCurrencies } from './conversion.js'
 import './style.css'
 
 const FALLBACK_CURRENCIES = {
@@ -106,11 +106,12 @@ function App() {
   const togglePin = (currency) => setPinnedCurrencies((current) => current.includes(currency) ? current.filter((item) => item !== currency) : [...current, currency])
   useEffect(() => {
     if (source === target) { setRate(1); setStatus('ready'); setDate('Today'); return }
-    setStatus('loading')
+    const cached = getCachedRate(localStorage, source, target)
+    if (cached) { setRate(cached.rate); setDate(cached.date); setStatus('cached') } else setStatus('loading')
     fetch(`https://api.frankfurter.dev/v2/rate/${source}/${target}`)
       .then((response) => response.ok ? response.json() : Promise.reject())
-      .then((data) => { setRate(data.rate); setDate(data.date); setStatus('ready') })
-      .catch(() => setStatus('error'))
+      .then((data) => { saveCachedRate(localStorage, source, target, data); setRate(data.rate); setDate(data.date); setStatus('ready') })
+      .catch(() => { if (!cached) setStatus('error') })
   }, [source, target])
 
   const amount = Number(amountText) || 0
@@ -126,13 +127,15 @@ function App() {
       <div className="converter">
         <div className="amount-wrap"><label htmlFor="amount">Price</label><div><span>{SYMBOLS[source] || source}</span><input id="amount" inputMode="decimal" value={amountText} onChange={(event) => setAmountText(normalizeAmountInput(event.target.value.replace(/[^0-9.]/g, '')))} /></div></div>
         <div className="currency-row"><CurrencyPicker label="From" value={source} onChange={selectCurrency(setSource)} currencies={currencies} pinnedCurrencies={pinnedCurrencies} recentCurrencies={recentCurrencies} onTogglePin={togglePin}/><button className="swap" onClick={() => { setSource(target); setTarget(source) }} aria-label="Swap currencies">⇄</button><CurrencyPicker label="To" value={target} onChange={selectCurrency(setTarget)} currencies={currencies} pinnedCurrencies={pinnedCurrencies} recentCurrencies={recentCurrencies} onTogglePin={togglePin}/></div>
-        <div className="market-rate"><span><i className={status}></i>{status === 'error' ? 'Rate unavailable' : status === 'loading' ? 'Getting live rate…' : `1 ${source} = ${rate.toLocaleString(undefined, { maximumFractionDigits: 5 })} ${target}`}</span><small>{date && `ECB · ${date}`}</small></div>
+        <div className="market-rate"><span><i className={status}></i>{status === 'error' ? 'Rate unavailable — connect once to save this pair' : status === 'loading' ? 'Getting live rate…' : `1 ${source} = ${rate.toLocaleString(undefined, { maximumFractionDigits: 5 })} ${target}`}</span><small>{date && `${status === 'cached' ? 'Saved rate' : 'ECB'} · ${date}`}</small></div>
       </div>
     </section>
-    <section className="routes"><div className="section-title"><p>Mental routes</p><h2>{status === 'ready' ? `${SYMBOLS[source] || ''}${amount} ≈ ${SYMBOLS[target] || ''}${exactValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : 'Finding shortcuts…'}</h2></div>
+    <section className="routes"><div className="section-title"><p>Mental routes</p><h2>{rate ? `${SYMBOLS[source] || ''}${amount} ≈ ${SYMBOLS[target] || ''}${exactValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : 'Finding shortcuts…'}</h2></div>
       <div className="method-grid">{easiest && <MethodCard method={easiest} label="Easiest" highlight amount={amount} exactValue={exactValue} target={target}/>} {lowestError && lowestError !== easiest && <MethodCard method={lowestError} label="Lowest error" amount={amount} exactValue={exactValue} target={target}/>} {alternatives.map((method) => <MethodCard key={method.steps.map((step) => step.id).join('-')} method={method} label="Alternative" amount={amount} exactValue={exactValue} target={target}/>)}</div>
     </section>
     <footer><div className="brand"><span>↻</span> CoinCompass</div><p>Live reference rates: Frankfurter / ECB.</p></footer>
   </main>
 }
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js')
+
 createRoot(document.getElementById('root')).render(<App />)

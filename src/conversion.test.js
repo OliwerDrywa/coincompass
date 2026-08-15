@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { filterCurrencies, findMentalMethods, formatStep, mergeCurrencyCatalogs, normalizeAmountInput, scrollIntoViewForKeyboard, selectFeaturedMethods, sortCurrencies, toCurrencyCatalog, updateRecentCurrencies } from './conversion.js'
+import { filterCurrencies, findMentalMethods, formatStep, getCachedRate, mergeCurrencyCatalogs, normalizeAmountInput, saveCachedRate, scrollIntoViewForKeyboard, selectFeaturedMethods, sortCurrencies, toCurrencyCatalog, updateRecentCurrencies } from './conversion.js'
 
 const styles = readFileSync(new URL('./style.css', import.meta.url), 'utf8')
 
@@ -112,5 +112,30 @@ describe('mental conversion methods', () => {
     expect(formatStep({ id: 'minus10' })).toBe('subtract 10%')
     expect(formatStep({ id: 'divide2' })).toBe('divide by 2')
     expect(formatStep({ id: 'times1000' })).toBe('multiply by 1,000')
+  })
+
+  it('returns a cached rate for the selected currency pair', () => {
+    const storage = new Map()
+    const cache = { getItem: (key) => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value) }
+
+    saveCachedRate(cache, 'EUR', 'PLN', { rate: 4.25, date: '2026-08-14' })
+
+    expect(getCachedRate(cache, 'EUR', 'PLN')).toEqual({ rate: 4.25, date: '2026-08-14' })
+  })
+
+  it('rejects missing or malformed cached rates', () => {
+    const cache = { getItem: () => '{bad json', setItem: vi.fn() }
+
+    expect(getCachedRate(cache, 'EUR', 'PLN')).toBeNull()
+  })
+
+  it('declares installable PWA metadata and a service worker', () => {
+    const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8')
+    const manifest = readFileSync(new URL('../public/manifest.webmanifest', import.meta.url), 'utf8')
+    const worker = readFileSync(new URL('../public/sw.js', import.meta.url), 'utf8')
+
+    expect(html).toContain('rel="manifest"')
+    expect(manifest).toContain('"display": "standalone"')
+    expect(worker).toContain('self.addEventListener(\'fetch\'')
   })
 })
