@@ -157,6 +157,12 @@ export function normalizeAmountInput(value) {
     : `${normalizedWhole}.${decimal}`;
 }
 
+export function rateIndicatorClass(status) {
+  if (status === "error") return "bg-[#d03238]";
+  if (status === "loading") return "bg-[#e5a520]";
+  return "bg-[#1c9c53]";
+}
+
 export function selectFeaturedMethods(methods) {
   const easiest = methods.reduce((best, method) => {
     if (

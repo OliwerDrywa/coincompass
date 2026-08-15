@@ -7,6 +7,7 @@ import {
   getCachedRate,
   mergeCurrencyCatalogs,
   normalizeAmountInput,
+  rateIndicatorClass,
   saveCachedRate,
   scrollIntoViewForKeyboard,
   selectFeaturedMethods,
@@ -129,6 +130,16 @@ describe("mental conversion methods", () => {
     expect(styles).not.toContain(".hero {");
     expect(packageJson).toContain("tailwindcss");
     expect(packageJson).toContain("prettier-plugin-tailwindcss");
+  });
+
+  it("shows a green indicator for ready and cached rates", () => {
+    expect(rateIndicatorClass("ready")).toBe("bg-[#1c9c53]");
+    expect(rateIndicatorClass("cached")).toBe("bg-[#1c9c53]");
+  });
+
+  it("keeps yellow for loading and red for failed rate requests", () => {
+    expect(rateIndicatorClass("loading")).toBe("bg-[#e5a520]");
+    expect(rateIndicatorClass("error")).toBe("bg-[#d03238]");
   });
 
   it("positions a picker search input 35% down the keyboard-safe viewport after focus", () => {
