@@ -513,7 +513,7 @@ function App() {
       </section>
       <section className="bg-forest px-[clamp(20px,6vw,90px)] py-[clamp(70px,9vw,120px)] text-white">
         <div className="mb-12 block min-[561px]:flex min-[561px]:items-end min-[561px]:justify-between min-[561px]:gap-[30px]">
-          <p className="text-lime font-mono text-[11px] font-medium tracking-[.13em] uppercase">
+          <p className="font-mono text-[11px] font-medium tracking-[.13em] text-[#9fe870] uppercase">
             Mental routes
           </p>
           <h2 className="m-0 mt-[15px] text-[clamp(34px,4vw,64px)] leading-[.95] font-bold tracking-[-.055em] min-[561px]:mt-0">
