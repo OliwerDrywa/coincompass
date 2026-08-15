@@ -7,6 +7,7 @@ import {
   getCachedRate,
   mergeCurrencyCatalogs,
   normalizeAmountInput,
+  rateIndicatorClass,
   saveCachedRate,
   scrollIntoViewForKeyboard,
   selectFeaturedMethods,
@@ -496,7 +497,7 @@ function App() {
           <div className="mt-6 flex justify-between gap-[15px] border-t border-[#dfe1da] pt-[18px] text-[13px]">
             <span className="font-bold">
               <i
-                className={`mr-[7px] inline-block size-[7px] rounded-full bg-[#e5a520] ${status === "ready" ? "bg-[#1c9c53]" : ""} ${status === "error" ? "bg-[#d03238]" : ""}`}
+                className={`mr-[7px] inline-block size-[7px] rounded-full ${rateIndicatorClass(status)}`}
               ></i>
               {status === "error"
                 ? "Rate unavailable — connect once to save this pair"
