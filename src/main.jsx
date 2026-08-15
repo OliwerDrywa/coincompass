@@ -420,7 +420,7 @@ function App() {
           Friendly price maths
         </div>
       </nav>
-      <section className="grid min-h-[650px] grid-cols-1 items-center gap-[clamp(32px,7vw,110px)] bg-[radial-gradient(circle_at_14%_82%,#9fe87077_0_11%,transparent_32%),#f4f5ef] px-[clamp(20px,6vw,90px)] py-[clamp(65px,8vw,115px)] min-[901px]:grid-cols-[1.05fr_.95fr]">
+      <section className="hero-surface grid min-h-[650px] grid-cols-1 items-center gap-[clamp(32px,7vw,110px)] px-[clamp(20px,6vw,90px)] py-[clamp(65px,8vw,115px)] min-[901px]:grid-cols-[1.05fr_.95fr]">
         <div className="max-w-[700px]">
           <p className="mb-6 font-mono text-[11px] font-medium tracking-[.13em] text-[#44652c] uppercase">
             Your currency pal
