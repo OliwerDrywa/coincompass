@@ -1,5 +1,8 @@
+import { readFileSync } from 'node:fs'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { filterCurrencies, findMentalMethods, formatStep, mergeCurrencyCatalogs, normalizeAmountInput, scrollIntoViewForKeyboard, selectFeaturedMethods, sortCurrencies, toCurrencyCatalog, updateRecentCurrencies } from './conversion.js'
+
+const styles = readFileSync(new URL('./style.css', import.meta.url), 'utf8')
 
 describe('mental conversion methods', () => {
   beforeEach(() => vi.useFakeTimers())
@@ -71,6 +74,10 @@ describe('mental conversion methods', () => {
       .toEqual(['USD', 'EUR', 'JPY', 'GBP', 'CHF'])
     expect(updateRecentCurrencies(['EUR', 'USD', 'JPY', 'GBP', 'CHF'], 'PLN'))
       .toEqual(['PLN', 'EUR', 'USD', 'JPY', 'GBP'])
+  })
+
+  it('opens only the right-hand desktop currency picker toward the left', () => {
+    expect(styles).toMatch(/\.currency-row\s+\.picker:last-child\s+\.currency-popover\s*\{[^}]*left:\s*auto[^}]*right:\s*0/)
   })
 
   it('positions a picker search input 35% down the keyboard-safe viewport after focus', () => {
