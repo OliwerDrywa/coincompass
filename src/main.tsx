@@ -346,7 +346,7 @@ function MethodCard({
       </header>
       <div className="mt-[45px] mb-auto flex flex-wrap items-center gap-2">
         {method.steps.map((step, index) => (
-          <React.Fragment key={`${step.id}-${index}`}>
+          <React.Fragment key={`${step.factor}-${index}`}>
             <span className="border-ink rounded-full border px-[13px] py-2.5 font-bold">
               {formatStep(step)}
             </span>
@@ -606,7 +606,7 @@ function App() {
           )}{" "}
           {alternatives.map((method) => (
             <MethodCard
-              key={method.steps.map((step) => step.id).join("-")}
+              key={method.steps.map((step) => step.factor).join("-")}
               method={method}
               label="Alternative"
               amount={amount}

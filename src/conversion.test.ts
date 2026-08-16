@@ -32,7 +32,7 @@ describe("mental conversion methods", () => {
     const [method] = findMentalMethods(4, 5);
     expect(method.approxRate).toBe(4);
     expect(method.errorPercent).toBe(0);
-    expect(method.steps).toEqual([{ id: "times4", factor: 4, cost: 1 }]);
+    expect(method.steps).toEqual([{ factor: 4, cost: 1 }]);
   });
 
   it("combines simple operations to approximate a rate", () => {
@@ -46,19 +46,21 @@ describe("mental conversion methods", () => {
     expect(methods).toHaveLength(5);
     expect(
       new Set(
-        methods.map((method) => method.steps.map((step) => step.id).join(",")),
+        methods.map((method) =>
+          method.steps.map((step) => step.factor).join(","),
+        ),
       ).size,
     ).toBe(5);
     expect(methods.every((method) => Number.isFinite(method.score))).toBe(true);
   });
 
   it("uses hundreds and thousands as one easy step", () => {
-    expect(findMentalMethods(100, 5)[0].steps.map((step) => step.id)).toEqual([
-      "times100",
-    ]);
-    expect(findMentalMethods(0.001, 5)[0].steps.map((step) => step.id)).toEqual(
-      ["divide1000"],
-    );
+    expect(
+      findMentalMethods(100, 5)[0].steps.map((step) => step.factor),
+    ).toEqual([100]);
+    expect(
+      findMentalMethods(0.001, 5)[0].steps.map((step) => step.factor),
+    ).toEqual([0.001]);
     expect(findMentalMethods(100, 5)[0].effort).toBe(1);
   });
 
@@ -202,12 +204,11 @@ describe("mental conversion methods", () => {
 
   it("supports large place-value shifts as one harder step", () => {
     const tenThousand = findMentalMethods(10000, 50).find(
-      (method) =>
-        method.steps.length === 1 && method.steps[0].id === "times10000",
+      (method) => method.steps.length === 1 && method.steps[0].factor === 10000,
     );
     const millionth = findMentalMethods(0.000001, 50).find(
       (method) =>
-        method.steps.length === 1 && method.steps[0].id === "divide1000000",
+        method.steps.length === 1 && method.steps[0].factor === 0.000001,
     );
     expect(tenThousand.steps).toHaveLength(1);
     expect(millionth.steps).toHaveLength(1);
@@ -215,9 +216,9 @@ describe("mental conversion methods", () => {
   });
 
   it("formats percentage and place-value instructions", () => {
-    expect(formatStep({ id: "minus10" })).toBe("subtract 10%");
-    expect(formatStep({ id: "divide2" })).toBe("divide by 2");
-    expect(formatStep({ id: "times1000" })).toBe("multiply by 1,000");
+    expect(formatStep({ factor: 0.9 })).toBe("subtract 10%");
+    expect(formatStep({ factor: 0.5 })).toBe("divide by 2");
+    expect(formatStep({ factor: 1000 })).toBe("multiply by 1,000");
   });
 
   it("returns a cached rate for the selected currency pair", () => {
