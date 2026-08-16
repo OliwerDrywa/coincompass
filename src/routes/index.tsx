@@ -1,8 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import type { Dispatch, SetStateAction } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import {
-  currencyPairFromSearch,
   filterCurrencies,
   findMentalMethods,
   formatStep,
@@ -79,16 +77,6 @@ const getStoredArray = (key: string): CurrencyCode[] => {
       : [];
   } catch {
     return [];
-  }
-};
-const savedPair = (): Partial<{
-  source: CurrencyCode;
-  target: CurrencyCode;
-}> => {
-  try {
-    return JSON.parse(localStorage.getItem(PAIR_KEY) ?? "{}");
-  } catch {
-    return {};
   }
 };
 type DisplayMentalMethod = MentalMethod & { rate: number };
@@ -369,25 +357,18 @@ function MethodCard({
 
 export const Route = createFileRoute("/")({
   validateSearch: (search: Record<string, unknown>) => ({
-    from: typeof search.from === "string" ? search.from : undefined,
-    to: typeof search.to === "string" ? search.to : undefined,
+    from: typeof search.from === "string" ? search.from.toUpperCase() : "EUR",
+    to: typeof search.to === "string" ? search.to.toUpperCase() : "PLN",
   }),
   component: App,
 });
 
 function App() {
-  const search = Route.useSearch();
+  const { from: source, to: target } = Route.useSearch();
   const navigate = Route.useNavigate();
-  const remembered = savedPair();
-  const initialPair = currencyPairFromSearch(search, {
-    source: remembered.source || "EUR",
-    target: remembered.target || "PLN",
-  });
   const [currencies, setCurrencies] = useState<CurrencyCatalog>(
     mergeCurrencyCatalogs(FALLBACK_CURRENCIES),
   );
-  const [source, setSource] = useState<CurrencyCode>(initialPair.source);
-  const [target, setTarget] = useState<CurrencyCode>(initialPair.target);
   const [pinnedCurrencies, setPinnedCurrencies] = useState(() =>
     getStoredArray(PINS_KEY),
   );
@@ -410,11 +391,7 @@ function App() {
     try {
       localStorage.setItem(PAIR_KEY, JSON.stringify({ source, target }));
     } catch {}
-    void navigate({
-      replace: true,
-      search: { from: source, to: target },
-    });
-  }, [navigate, source, target]);
+  }, [source, target]);
   useEffect(() => {
     try {
       localStorage.setItem(PINS_KEY, JSON.stringify(pinnedCurrencies));
@@ -426,9 +403,9 @@ function App() {
     } catch {}
   }, [recentCurrencies]);
   const selectCurrency =
-    (setter: Dispatch<SetStateAction<CurrencyCode>>) =>
+    (key: "from" | "to") =>
     (currency: CurrencyCode): void => {
-      setter(currency);
+      void navigate({ search: (current) => ({ ...current, [key]: currency }) });
       setRecentCurrencies((current) =>
         updateRecentCurrencies(current, currency),
       );
@@ -544,7 +521,7 @@ function App() {
             <CurrencyPicker
               label="From"
               value={source}
-              onChange={selectCurrency(setSource)}
+              onChange={selectCurrency("from")}
               currencies={currencies}
               pinnedCurrencies={pinnedCurrencies}
               recentCurrencies={recentCurrencies}
@@ -552,10 +529,15 @@ function App() {
             />
             <button
               className="bg-forest text-lime col-start-2 row-start-1 mb-0.5 size-[49px] rounded-full border-0 text-2xl transition-transform duration-200 hover:scale-105 hover:rotate-180"
-              onClick={() => {
-                setSource(target);
-                setTarget(source);
-              }}
+              onClick={() =>
+                void navigate({
+                  search: (current) => ({
+                    ...current,
+                    from: current.to,
+                    to: current.from,
+                  }),
+                })
+              }
               aria-label="Swap currencies"
             >
               ⇄
@@ -564,7 +546,7 @@ function App() {
               <CurrencyPicker
                 label="To"
                 value={target}
-                onChange={selectCurrency(setTarget)}
+                onChange={selectCurrency("to")}
                 currencies={currencies}
                 pinnedCurrencies={pinnedCurrencies}
                 recentCurrencies={recentCurrencies}
