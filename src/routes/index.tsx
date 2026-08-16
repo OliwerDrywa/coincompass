@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import type { Dispatch, SetStateAction } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   filterCurrencies,
@@ -78,16 +77,6 @@ const getStoredArray = (key: string): CurrencyCode[] => {
       : [];
   } catch {
     return [];
-  }
-};
-const savedPair = (): Partial<{
-  source: CurrencyCode;
-  target: CurrencyCode;
-}> => {
-  try {
-    return JSON.parse(localStorage.getItem(PAIR_KEY) ?? "{}");
-  } catch {
-    return {};
   }
 };
 type DisplayMentalMethod = MentalMethod & { rate: number };
@@ -366,18 +355,19 @@ function MethodCard({
   );
 }
 
-export const Route = createFileRoute("/")({ component: App });
+export const Route = createFileRoute("/")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    from: typeof search.from === "string" ? search.from.toUpperCase() : "EUR",
+    to: typeof search.to === "string" ? search.to.toUpperCase() : "PLN",
+  }),
+  component: App,
+});
 
 function App() {
-  const remembered = savedPair();
+  const { from: source, to: target } = Route.useSearch();
+  const navigate = Route.useNavigate();
   const [currencies, setCurrencies] = useState<CurrencyCatalog>(
     mergeCurrencyCatalogs(FALLBACK_CURRENCIES),
-  );
-  const [source, setSource] = useState<CurrencyCode>(
-    remembered.source || "EUR",
-  );
-  const [target, setTarget] = useState<CurrencyCode>(
-    remembered.target || "PLN",
   );
   const [pinnedCurrencies, setPinnedCurrencies] = useState(() =>
     getStoredArray(PINS_KEY),
@@ -413,9 +403,9 @@ function App() {
     } catch {}
   }, [recentCurrencies]);
   const selectCurrency =
-    (setter: Dispatch<SetStateAction<CurrencyCode>>) =>
+    (key: "from" | "to") =>
     (currency: CurrencyCode): void => {
-      setter(currency);
+      void navigate({ search: (current) => ({ ...current, [key]: currency }) });
       setRecentCurrencies((current) =>
         updateRecentCurrencies(current, currency),
       );
@@ -531,7 +521,7 @@ function App() {
             <CurrencyPicker
               label="From"
               value={source}
-              onChange={selectCurrency(setSource)}
+              onChange={selectCurrency("from")}
               currencies={currencies}
               pinnedCurrencies={pinnedCurrencies}
               recentCurrencies={recentCurrencies}
@@ -539,10 +529,15 @@ function App() {
             />
             <button
               className="bg-forest text-lime col-start-2 row-start-1 mb-0.5 size-[49px] rounded-full border-0 text-2xl transition-transform duration-200 hover:scale-105 hover:rotate-180"
-              onClick={() => {
-                setSource(target);
-                setTarget(source);
-              }}
+              onClick={() =>
+                void navigate({
+                  search: (current) => ({
+                    ...current,
+                    from: current.to,
+                    to: current.from,
+                  }),
+                })
+              }
               aria-label="Swap currencies"
             >
               ⇄
@@ -551,7 +546,7 @@ function App() {
               <CurrencyPicker
                 label="To"
                 value={target}
-                onChange={selectCurrency(setTarget)}
+                onChange={selectCurrency("to")}
                 currencies={currencies}
                 pinnedCurrencies={pinnedCurrencies}
                 recentCurrencies={recentCurrencies}

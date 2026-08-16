@@ -14,6 +14,21 @@ export type MentalMethod = {
 export type CachedRate = { date: string; rate: number };
 export type StorageLike = Pick<Storage, "getItem" | "setItem">;
 export type CurrencyApiResponse = { iso_code: CurrencyCode; name: string };
+type CurrencyPair = { source: CurrencyCode; target: CurrencyCode };
+export type CurrencyPairSearch = { from?: unknown; to?: unknown };
+
+const currencyCodeFromSearch = (value: unknown): CurrencyCode | undefined =>
+  typeof value === "string" && /^[a-z]{3}$/i.test(value)
+    ? value.toUpperCase()
+    : undefined;
+
+export const currencyPairFromSearch = (
+  search: CurrencyPairSearch,
+  fallback: CurrencyPair,
+): CurrencyPair => ({
+  source: currencyCodeFromSearch(search.from) ?? fallback.source,
+  target: currencyCodeFromSearch(search.to) ?? fallback.target,
+});
 
 const OPERATIONS: Operation[] = [
   { factor: 2, cost: 1 },
@@ -44,7 +59,7 @@ const OPERATIONS: Operation[] = [
   { factor: 1 / 3, cost: 2 },
 ];
 
-export const EXTRA_CURRENCIES: CurrencyCatalog = {
+const EXTRA_CURRENCIES: CurrencyCatalog = {
   AED: "United Arab Emirates Dirham",
   ARS: "Argentine Peso",
   BDT: "Bangladeshi Taka",
