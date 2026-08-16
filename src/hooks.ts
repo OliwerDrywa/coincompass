@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import {
   getCachedRate,
+  parseCachedRate,
   saveCachedRate,
   toCurrencyCatalog,
 } from "./conversion.ts";
 import type {
-  CachedRate,
   CurrencyApiResponse,
   CurrencyCatalog,
   CurrencyCode,
@@ -87,23 +87,29 @@ export const useExchangeRate = (
     );
 
     const controller = new AbortController();
+    let active = true;
     void fetch(`https://api.frankfurter.dev/v2/rate/${source}/${target}`, {
       signal: controller.signal,
     })
       .then((response) => {
         if (!response.ok) throw new Error("Exchange rate unavailable");
-        return response.json() as Promise<CachedRate>;
+        return response.json() as Promise<unknown>;
       })
-      .then((rate) => {
+      .then((value) => {
+        const rate = parseCachedRate(value);
+        if (!active || !rate) throw new Error("Invalid exchange rate");
         saveCachedRate(localStorage, source, target, rate);
         setDetails({ ...rate, status: "ready" });
       })
       .catch(() => {
-        if (!controller.signal.aborted && !cached)
+        if (active && !controller.signal.aborted && !cached)
           setDetails({ date: "", rate: null, status: "error" });
       });
 
-    return () => controller.abort();
+    return () => {
+      active = false;
+      controller.abort();
+    };
   }, [source, target]);
 
   return details;

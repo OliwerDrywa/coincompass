@@ -27,6 +27,13 @@ self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   if (new URL(event.request.url).origin !== self.location.origin) return;
 
+  if (event.request.mode === "navigate") {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match("/index.html")),
+    );
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request).then(
       (cached) =>

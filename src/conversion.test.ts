@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import type { StorageLike } from "./conversion.ts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  currencyCodeFromCatalog,
   currencyCodeFromSearch,
   filterCurrencies,
   findMentalMethods,
@@ -9,6 +10,7 @@ import {
   getCachedRate,
   getPriorityCurrencies,
   normalizeAmountInput,
+  parseCachedRate,
   rateIndicatorClass,
   saveCachedRate,
   scrollIntoViewForKeyboard,
@@ -27,6 +29,11 @@ const packageJson = readFileSync(
   new URL("../package.json", import.meta.url),
   "utf8",
 );
+const serviceWorker = readFileSync(
+  new URL("../public/sw.js", import.meta.url),
+  "utf8",
+);
+const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 
 describe("mental conversion methods", () => {
   beforeEach(() => vi.useFakeTimers());
@@ -98,6 +105,13 @@ describe("mental conversion methods", () => {
     expect(currencyCodeFromSearch("usd", "EUR")).toBe("USD");
     expect(currencyCodeFromSearch("not-a-code", "EUR")).toBe("EUR");
     expect(currencyCodeFromSearch(undefined, "PLN")).toBe("PLN");
+  });
+
+  it("uses only currency codes present in the loaded catalog", () => {
+    const catalog = { EUR: "Euro", PLN: "Polish Złoty", USD: "US Dollar" };
+    expect(currencyCodeFromCatalog("USD", catalog, "EUR")).toBe("USD");
+    expect(currencyCodeFromCatalog("AAA", catalog, "EUR")).toBe("EUR");
+    expect(currencyCodeFromCatalog("USD", {}, "EUR")).toBe("USD");
   });
 
   it("sorts currencies alphabetically by currency code", () => {
@@ -293,28 +307,67 @@ describe("mental conversion methods", () => {
     });
   });
 
-  it("rejects missing or malformed cached rates", () => {
-    const cache = { getItem: () => "{bad json", setItem: vi.fn() };
+  it("rejects missing, malformed, and nonpositive cached rates", () => {
+    expect(
+      getCachedRate(
+        { getItem: () => "{bad json", setItem: vi.fn() },
+        "EUR",
+        "PLN",
+      ),
+    ).toBeNull();
+    expect(
+      getCachedRate(
+        {
+          getItem: () => JSON.stringify({ date: "2026-08-16", rate: 0 }),
+          setItem: vi.fn(),
+        },
+        "EUR",
+        "PLN",
+      ),
+    ).toBeNull();
+    expect(
+      getCachedRate(
+        {
+          getItem: () => JSON.stringify({ date: "", rate: 4.2 }),
+          setItem: vi.fn(),
+        },
+        "EUR",
+        "PLN",
+      ),
+    ).toBeNull();
+  });
 
-    expect(getCachedRate(cache, "EUR", "PLN")).toBeNull();
+  it("validates exchange-rate API responses before use", () => {
+    expect(parseCachedRate({ date: "2026-08-16", rate: 4.2 })).toEqual({
+      date: "2026-08-16",
+      rate: 4.2,
+    });
+    expect(parseCachedRate({ date: "2026-08-16", rate: "4.2" })).toBeNull();
+    expect(parseCachedRate({ date: "", rate: 4.2 })).toBeNull();
+    expect(parseCachedRate({ date: "2026-08-16", rate: -1 })).toBeNull();
   });
 
   it("declares installable PWA metadata and a service worker", () => {
-    const html = readFileSync(
-      new URL("../index.html", import.meta.url),
-      "utf8",
-    );
     const manifest = readFileSync(
       new URL("../public/manifest.webmanifest", import.meta.url),
-      "utf8",
-    );
-    const worker = readFileSync(
-      new URL("../public/sw.js", import.meta.url),
       "utf8",
     );
 
     expect(html).toContain('rel="manifest"');
     expect(manifest).toContain('"display": "standalone"');
-    expect(worker).toMatch(/self\.addEventListener\(["']fetch["']/);
+    expect(serviceWorker).toMatch(/self\.addEventListener\(["']fetch["']/);
+  });
+
+  it("uses network-first navigation so deployments cannot be pinned by stale HTML", () => {
+    expect(serviceWorker).toContain('event.request.mode === "navigate"');
+    expect(serviceWorker).toContain("fetch(event.request)");
+    expect(serviceWorker.indexOf("fetch(event.request)")).toBeLessThan(
+      serviceWorker.indexOf("caches.match(event.request)"),
+    );
+  });
+
+  it("references the TypeScript application entry directly", () => {
+    expect(html).toContain('src="/src/main.tsx"');
+    expect(html).not.toContain('src="/src/main.jsx"');
   });
 });

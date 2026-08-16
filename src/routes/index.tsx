@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import {
+  currencyCodeFromCatalog,
   currencyCodeFromSearch,
   filterCurrencies,
   findMentalMethods,
@@ -319,9 +320,11 @@ export const Route = createFileRoute("/")({
 });
 
 function App() {
-  const { from: source, to: target } = Route.useSearch();
+  const search = Route.useSearch();
   const navigate = Route.useNavigate();
   const currencies = useCurrencyCatalog();
+  const source = currencyCodeFromCatalog(search.from, currencies, "EUR");
+  const target = currencyCodeFromCatalog(search.to, currencies, "PLN");
   const [pinnedCurrencies, setPinnedCurrencies] = useStoredCurrencies(PINS_KEY);
   const [recentCurrencies, setRecentCurrencies] = useStoredCurrencies(
     RECENTS_KEY,

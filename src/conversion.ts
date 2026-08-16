@@ -22,6 +22,14 @@ export const currencyCodeFromSearch = (
   typeof value === "string" && /^[a-z]{3}$/i.test(value)
     ? value.toUpperCase()
     : fallback;
+export const currencyCodeFromCatalog = (
+  currency: CurrencyCode,
+  currencies: CurrencyCatalog,
+  fallback: CurrencyCode,
+): CurrencyCode =>
+  Object.keys(currencies).length === 0 || currencies[currency]
+    ? currency
+    : fallback;
 
 const OPERATIONS: Operation[] = [
   { factor: 2, cost: 1 },
@@ -124,6 +132,17 @@ export const formatStep = ({ factor }: Pick<Operation, "factor">): string => {
 };
 const rateCacheKey = (source: CurrencyCode, target: CurrencyCode): string =>
   `coincompass-rate-${source}-${target}`;
+export const parseCachedRate = (value: unknown): CachedRate | null => {
+  if (typeof value !== "object" || value === null) return null;
+  const { date, rate } = value as Partial<CachedRate>;
+  return typeof rate === "number" &&
+    Number.isFinite(rate) &&
+    rate > 0 &&
+    typeof date === "string" &&
+    date.length > 0
+    ? { date, rate }
+    : null;
+};
 export const getCachedRate = (
   storage: StorageLike,
   source: CurrencyCode,
@@ -133,13 +152,7 @@ export const getCachedRate = (
     const cached: unknown = JSON.parse(
       storage.getItem(rateCacheKey(source, target)) ?? "null",
     );
-    if (typeof cached !== "object" || cached === null) return null;
-    const { date, rate } = cached as Partial<CachedRate>;
-    return typeof rate === "number" &&
-      Number.isFinite(rate) &&
-      typeof date === "string"
-      ? { date, rate }
-      : null;
+    return parseCachedRate(cached);
   } catch {
     return null;
   }
