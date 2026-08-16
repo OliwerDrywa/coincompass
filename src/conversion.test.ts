@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import type { StorageLike } from "./conversion.ts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  currencyPairFromSearch,
   filterCurrencies,
   findMentalMethods,
   formatStep,
@@ -93,6 +94,21 @@ describe("mental conversion methods", () => {
         { iso_code: "JPY", name: "Japanese Yen" },
       ]),
     ).toEqual({ TWD: "New Taiwan Dollar", JPY: "Japanese Yen" });
+  });
+
+  it("uses valid URL currency params and falls back independently", () => {
+    expect(
+      currencyPairFromSearch(
+        { from: "usd", to: "jpy" },
+        { source: "EUR", target: "PLN" },
+      ),
+    ).toEqual({ source: "USD", target: "JPY" });
+    expect(
+      currencyPairFromSearch(
+        { from: "not-a-code", to: "CHF" },
+        { source: "EUR", target: "PLN" },
+      ),
+    ).toEqual({ source: "EUR", target: "CHF" });
   });
 
   it("sorts currencies alphabetically by currency code", () => {

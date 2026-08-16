@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import {
+  currencyPairFromSearch,
   filterCurrencies,
   findMentalMethods,
   formatStep,
@@ -366,19 +367,27 @@ function MethodCard({
   );
 }
 
-export const Route = createFileRoute("/")({ component: App });
+export const Route = createFileRoute("/")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    from: typeof search.from === "string" ? search.from : undefined,
+    to: typeof search.to === "string" ? search.to : undefined,
+  }),
+  component: App,
+});
 
 function App() {
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
   const remembered = savedPair();
+  const initialPair = currencyPairFromSearch(search, {
+    source: remembered.source || "EUR",
+    target: remembered.target || "PLN",
+  });
   const [currencies, setCurrencies] = useState<CurrencyCatalog>(
     mergeCurrencyCatalogs(FALLBACK_CURRENCIES),
   );
-  const [source, setSource] = useState<CurrencyCode>(
-    remembered.source || "EUR",
-  );
-  const [target, setTarget] = useState<CurrencyCode>(
-    remembered.target || "PLN",
-  );
+  const [source, setSource] = useState<CurrencyCode>(initialPair.source);
+  const [target, setTarget] = useState<CurrencyCode>(initialPair.target);
   const [pinnedCurrencies, setPinnedCurrencies] = useState(() =>
     getStoredArray(PINS_KEY),
   );
@@ -401,7 +410,11 @@ function App() {
     try {
       localStorage.setItem(PAIR_KEY, JSON.stringify({ source, target }));
     } catch {}
-  }, [source, target]);
+    void navigate({
+      replace: true,
+      search: { from: source, to: target },
+    });
+  }, [navigate, source, target]);
   useEffect(() => {
     try {
       localStorage.setItem(PINS_KEY, JSON.stringify(pinnedCurrencies));
