@@ -59,7 +59,7 @@ const OPERATIONS: Operation[] = [
   { factor: 1 / 3, cost: 2 },
 ];
 
-export const EXTRA_CURRENCIES: CurrencyCatalog = {
+const EXTRA_CURRENCIES: CurrencyCatalog = {
   AED: "United Arab Emirates Dirham",
   ARS: "Argentine Peso",
   BDT: "Bangladeshi Taka",
