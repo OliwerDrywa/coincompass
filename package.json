@@ -10,7 +10,7 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "coverage": "vitest run --coverage",
-    "knip": "node node_modules/knip/bin/knip.js"
+    "knip": "knip --include-entry-exports"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
@@ -21,7 +21,6 @@
     "@vitejs/plugin-react": "latest",
     "@vitest/coverage-v8": "^4.1.10",
     "knip": "6.32.2",
-    "node": "20.20.2",
     "prettier": "^3.9.6",
     "prettier-plugin-tailwindcss": "^0.8.1",
     "react": "latest",

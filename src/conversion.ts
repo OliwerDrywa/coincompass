@@ -14,7 +14,7 @@ export type MentalMethod = {
 export type CachedRate = { date: string; rate: number };
 export type StorageLike = Pick<Storage, "getItem" | "setItem">;
 export type CurrencyApiResponse = { iso_code: CurrencyCode; name: string };
-export type CurrencyPair = { source: CurrencyCode; target: CurrencyCode };
+type CurrencyPair = { source: CurrencyCode; target: CurrencyCode };
 export type CurrencyPairSearch = { from?: unknown; to?: unknown };
 
 const currencyCodeFromSearch = (value: unknown): CurrencyCode | undefined =>
