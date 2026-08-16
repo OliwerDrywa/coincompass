@@ -271,7 +271,7 @@ describe("mental conversion methods", () => {
       setDate("");
       setStatus("loading");
     }
-    fetch(`https://api.frankfurter.dev/v2/rate/${source}/${target}`)`);
+    fetch(\`https://api.frankfurter.dev/v2/rate/\${source}/\${target}\`)`);
   });
 
   it("returns a cached rate for the selected currency pair", () => {
