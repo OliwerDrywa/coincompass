@@ -5,20 +5,14 @@ on:
   push:
     branches: [main]
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npm run build
+permissions:
+  contents: read
 
-  knip:
+jobs:
+  dependencies:
+    name: Install dependencies
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -26,4 +20,44 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run knip
+      - run: tar -czf node-modules.tar.gz node_modules
+      - uses: actions/upload-artifact@v4
+        with:
+          name: node-modules-${{ github.sha }}
+          path: node-modules.tar.gz
+          retention-days: 1
+
+  quality:
+    name: ${{ matrix.check.name }}
+    needs: dependencies
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ matrix.check.timeout }}
+    strategy:
+      fail-fast: false
+      matrix:
+        check:
+          - name: Format
+            command: npm run format:check
+            timeout: 5
+          - name: Typecheck
+            command: npm run typecheck
+            timeout: 5
+          - name: Unit tests
+            command: npm test
+            timeout: 15
+          - name: Build
+            command: npm run build
+            timeout: 10
+          - name: Knip
+            command: npm run knip
+            timeout: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          name: node-modules-${{ github.sha }}
+      - run: tar -xzf node-modules.tar.gz
+      - run: ${{ matrix.check.command }}

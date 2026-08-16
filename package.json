@@ -10,7 +10,9 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "coverage": "vitest run --coverage",
-    "knip": "knip --include-entry-exports"
+    "format:check": "prettier --check .",
+    "knip": "knip --include-entry-exports",
+    "check": "npm run format:check && npm run typecheck && npm test && npm run knip && npm run build"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
