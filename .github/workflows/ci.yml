@@ -20,11 +20,11 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: tar -czf node-modules.tar.gz node_modules
       - uses: actions/upload-artifact@v4
         with:
           name: node-modules-${{ github.sha }}
-          path: node_modules
-          include-hidden-files: true
+          path: node-modules.tar.gz
           retention-days: 1
 
   quality:
@@ -59,5 +59,5 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: node-modules-${{ github.sha }}
-          path: node_modules
+      - run: tar -xzf node-modules.tar.gz
       - run: ${{ matrix.check.command }}
