@@ -5,20 +5,27 @@ on:
   push:
     branches: [main]
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npm run build
+permissions:
+  contents: read
 
-  knip:
+jobs:
+  quality:
+    name: ${{ matrix.check.name }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        check:
+          - name: Format
+            command: npm run format:check
+          - name: Typecheck
+            command: npm run typecheck
+          - name: Unit tests
+            command: npm test
+          - name: Build
+            command: npm run build
+          - name: Knip
+            command: npm run knip
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -26,4 +33,4 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run knip
+      - run: ${{ matrix.check.command }}

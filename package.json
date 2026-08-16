@@ -10,6 +10,7 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "coverage": "vitest run --coverage",
+    "format:check": "prettier --check .",
     "knip": "knip --include-entry-exports"
   },
   "devDependencies": {
