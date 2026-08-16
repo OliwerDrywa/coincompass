@@ -113,11 +113,13 @@ export const scrollIntoViewForKeyboard = (
 };
 
 export const formatStep = ({ factor }: Pick<Operation, "factor">): string => {
-  const roundedPercent = Math.round(Math.abs(factor - 1) * 100);
-  if (roundedPercent && Math.abs(factor - 1) < 0.3)
-    return factor > 1
-      ? `add ${roundedPercent}%`
-      : `subtract ${roundedPercent}%`;
+  if (factor > 0.5 && factor < 2) {
+    const roundedPercent = Math.round(Math.abs(factor - 1) * 100);
+    if (roundedPercent)
+      return factor > 1
+        ? `add ${roundedPercent}%`
+        : `subtract ${roundedPercent}%`;
+  }
   const [operator, operand] =
     factor >= 1 ? ["multiply", factor] : ["divide", 1 / factor];
   return `${operator} by ${operand.toLocaleString(undefined, { maximumFractionDigits: 6 })}`;

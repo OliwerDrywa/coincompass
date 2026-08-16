@@ -215,9 +215,12 @@ describe("mental conversion methods", () => {
     expect(tenThousand.effort).toBeGreaterThan(1);
   });
 
-  it("formats percentage and place-value instructions", () => {
+  it("formats percentage instructions strictly between divide and multiply by two", () => {
     expect(formatStep({ factor: 0.9 })).toBe("subtract 10%");
+    expect(formatStep({ factor: 0.6 })).toBe("subtract 40%");
+    expect(formatStep({ factor: 1.75 })).toBe("add 75%");
     expect(formatStep({ factor: 0.5 })).toBe("divide by 2");
+    expect(formatStep({ factor: 2 })).toBe("multiply by 2");
     expect(formatStep({ factor: 1000 })).toBe("multiply by 1,000");
   });
 
