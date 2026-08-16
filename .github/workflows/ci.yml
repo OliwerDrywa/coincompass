@@ -12,20 +12,26 @@ jobs:
   quality:
     name: ${{ matrix.check.name }}
     runs-on: ubuntu-latest
+    timeout-minutes: ${{ matrix.check.timeout }}
     strategy:
       fail-fast: false
       matrix:
         check:
           - name: Format
             command: npm run format:check
+            timeout: 5
           - name: Typecheck
             command: npm run typecheck
+            timeout: 5
           - name: Unit tests
             command: npm test
+            timeout: 15
           - name: Build
             command: npm run build
+            timeout: 10
           - name: Knip
             command: npm run knip
+            timeout: 5
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

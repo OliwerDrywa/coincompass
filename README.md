@@ -19,3 +19,13 @@ npm run dev
 ```
 
 Build with `npm run build`. Rates are reference data for everyday estimates, not trading.
+
+## Quality checks
+
+Run the full local pull-request gate with:
+
+```bash
+npm run check
+```
+
+This validates formatting, TypeScript, unit tests, unused files and dependencies, and the production build. GitHub Actions runs those checks independently on pull requests and pushes to `main`.
