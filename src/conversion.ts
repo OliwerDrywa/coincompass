@@ -14,21 +14,14 @@ export type MentalMethod = {
 export type CachedRate = { date: string; rate: number };
 export type StorageLike = Pick<Storage, "getItem" | "setItem">;
 export type CurrencyApiResponse = { iso_code: CurrencyCode; name: string };
-type CurrencyPair = { source: CurrencyCode; target: CurrencyCode };
-export type CurrencyPairSearch = { from?: unknown; to?: unknown };
 
-const currencyCodeFromSearch = (value: unknown): CurrencyCode | undefined =>
+export const currencyCodeFromSearch = (
+  value: unknown,
+  fallback: CurrencyCode,
+): CurrencyCode =>
   typeof value === "string" && /^[a-z]{3}$/i.test(value)
     ? value.toUpperCase()
-    : undefined;
-
-export const currencyPairFromSearch = (
-  search: CurrencyPairSearch,
-  fallback: CurrencyPair,
-): CurrencyPair => ({
-  source: currencyCodeFromSearch(search.from) ?? fallback.source,
-  target: currencyCodeFromSearch(search.to) ?? fallback.target,
-});
+    : fallback;
 
 const OPERATIONS: Operation[] = [
   { factor: 2, cost: 1 },
@@ -87,6 +80,21 @@ export const updateRecentCurrencies = (
     0,
     5,
   );
+export const getPriorityCurrencies = (
+  currencies: CurrencyCatalog,
+  pinnedCurrencies: CurrencyCode[],
+  recentCurrencies: CurrencyCode[],
+  query: string,
+): CurrencyEntry[] => {
+  const priorityCodes = [
+    ...new Set([...pinnedCurrencies, ...recentCurrencies]),
+  ];
+  const matches = new Map(filterCurrencies(currencies, query));
+  return priorityCodes.flatMap((code) => {
+    const name = matches.get(code);
+    return name ? [[code, name] as const] : [];
+  });
+};
 export const scrollIntoViewForKeyboard = (
   element: HTMLElement | null,
 ): void => {
