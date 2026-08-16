@@ -428,7 +428,11 @@ function App() {
       setRate(cached.rate);
       setDate(cached.date);
       setStatus("cached");
-    } else setStatus("loading");
+    } else {
+      setRate(null);
+      setDate("");
+      setStatus("loading");
+    }
     fetch(`https://api.frankfurter.dev/v2/rate/${source}/${target}`)
       .then((response) => (response.ok ? response.json() : Promise.reject()))
       .then((data: CachedRate) => {

@@ -265,6 +265,15 @@ describe("mental conversion methods", () => {
     expect(formatStep({ factor: 1000 })).toBe("multiply by 1,000");
   });
 
+  it("clears prior rate details before fetching an uncached currency pair", () => {
+    expect(app).toContain(`    } else {
+      setRate(null);
+      setDate("");
+      setStatus("loading");
+    }
+    fetch(\`https://api.frankfurter.dev/v2/rate/\${source}/\${target}\`)`);
+  });
+
   it("returns a cached rate for the selected currency pair", () => {
     const storage = new Map();
     const cache: StorageLike = {
