@@ -18,7 +18,10 @@ import {
 } from "./conversion.ts";
 
 const styles = readFileSync(new URL("./style.css", import.meta.url), "utf8");
-const app = readFileSync(new URL("./main.tsx", import.meta.url), "utf8");
+const app = readFileSync(
+  new URL("./routes/index.tsx", import.meta.url),
+  "utf8",
+);
 const packageJson = readFileSync(
   new URL("../package.json", import.meta.url),
   "utf8",
@@ -133,6 +136,28 @@ describe("mental conversion methods", () => {
     expect(styles).not.toContain(".hero {");
     expect(packageJson).toContain("tailwindcss");
     expect(packageJson).toContain("prettier-plugin-tailwindcss");
+  });
+
+  it("configures TanStack Router file-based routing without TanStack Start", () => {
+    const viteConfig = readFileSync(
+      new URL("../vite.config.ts", import.meta.url),
+      "utf8",
+    );
+    const routeTree = readFileSync(
+      new URL("./routeTree.gen.ts", import.meta.url),
+      "utf8",
+    );
+    const indexRoute = readFileSync(
+      new URL("./routes/index.tsx", import.meta.url),
+      "utf8",
+    );
+
+    expect(packageJson).toContain('"@tanstack/react-router"');
+    expect(packageJson).toContain('"@tanstack/router-plugin"');
+    expect(packageJson).not.toContain("@tanstack/react-start");
+    expect(viteConfig).toContain("tanstackRouter");
+    expect(routeTree).toContain("FileRoutesByPath");
+    expect(indexRoute).toContain('createFileRoute("/")');
   });
 
   it("uses equals signs for live conversion results", () => {
