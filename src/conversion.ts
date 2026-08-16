@@ -14,21 +14,14 @@ export type MentalMethod = {
 export type CachedRate = { date: string; rate: number };
 export type StorageLike = Pick<Storage, "getItem" | "setItem">;
 export type CurrencyApiResponse = { iso_code: CurrencyCode; name: string };
-type CurrencyPair = { source: CurrencyCode; target: CurrencyCode };
-export type CurrencyPairSearch = { from?: unknown; to?: unknown };
 
-const currencyCodeFromSearch = (value: unknown): CurrencyCode | undefined =>
+export const currencyCodeFromSearch = (
+  value: unknown,
+  fallback: CurrencyCode,
+): CurrencyCode =>
   typeof value === "string" && /^[a-z]{3}$/i.test(value)
     ? value.toUpperCase()
-    : undefined;
-
-export const currencyPairFromSearch = (
-  search: CurrencyPairSearch,
-  fallback: CurrencyPair,
-): CurrencyPair => ({
-  source: currencyCodeFromSearch(search.from) ?? fallback.source,
-  target: currencyCodeFromSearch(search.to) ?? fallback.target,
-});
+    : fallback;
 
 const OPERATIONS: Operation[] = [
   { factor: 2, cost: 1 },
@@ -59,31 +52,6 @@ const OPERATIONS: Operation[] = [
   { factor: 1 / 3, cost: 2 },
 ];
 
-const EXTRA_CURRENCIES: CurrencyCatalog = {
-  AED: "United Arab Emirates Dirham",
-  ARS: "Argentine Peso",
-  BDT: "Bangladeshi Taka",
-  CLP: "Chilean Peso",
-  COP: "Colombian Peso",
-  EGP: "Egyptian Pound",
-  HKD: "Hong Kong Dollar",
-  IDR: "Indonesian Rupiah",
-  ILS: "Israeli New Shekel",
-  KES: "Kenyan Shilling",
-  KRW: "South Korean Won",
-  MAD: "Moroccan Dirham",
-  NGN: "Nigerian Naira",
-  PKR: "Pakistani Rupee",
-  SAR: "Saudi Riyal",
-  THB: "Thai Baht",
-  TWD: "New Taiwan Dollar",
-  UAH: "Ukrainian Hryvnia",
-  VND: "Vietnamese Dong",
-};
-
-export const mergeCurrencyCatalogs = (
-  currencies: CurrencyCatalog,
-): CurrencyCatalog => ({ ...EXTRA_CURRENCIES, ...currencies });
 export const toCurrencyCatalog = (
   currencies: CurrencyApiResponse[],
 ): CurrencyCatalog =>
@@ -112,6 +80,21 @@ export const updateRecentCurrencies = (
     0,
     5,
   );
+export const getPriorityCurrencies = (
+  currencies: CurrencyCatalog,
+  pinnedCurrencies: CurrencyCode[],
+  recentCurrencies: CurrencyCode[],
+  query: string,
+): CurrencyEntry[] => {
+  const priorityCodes = [
+    ...new Set([...pinnedCurrencies, ...recentCurrencies]),
+  ];
+  const matches = new Map(filterCurrencies(currencies, query));
+  return priorityCodes.flatMap((code) => {
+    const name = matches.get(code);
+    return name ? [[code, name] as const] : [];
+  });
+};
 export const scrollIntoViewForKeyboard = (
   element: HTMLElement | null,
 ): void => {

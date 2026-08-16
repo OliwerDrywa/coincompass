@@ -1,61 +1,29 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import {
+  currencyCodeFromSearch,
   filterCurrencies,
   findMentalMethods,
   formatStep,
-  getCachedRate,
-  mergeCurrencyCatalogs,
+  getPriorityCurrencies,
   normalizeAmountInput,
   rateIndicatorClass,
-  saveCachedRate,
   scrollIntoViewForKeyboard,
   selectFeaturedMethods,
-  toCurrencyCatalog,
   updateRecentCurrencies,
 } from "../conversion.ts";
+import {
+  useCurrencyCatalog,
+  useExchangeRate,
+  useStoredCurrencies,
+} from "../hooks.ts";
 import "../style.css";
 import type {
-  CachedRate,
-  CurrencyApiResponse,
   CurrencyCatalog,
   CurrencyCode,
   MentalMethod,
-  RateStatus,
 } from "../conversion.ts";
 
-const FALLBACK_CURRENCIES: CurrencyCatalog = {
-  AUD: "Australian Dollar",
-  BRL: "Brazilian Real",
-  CAD: "Canadian Dollar",
-  CHF: "Swiss Franc",
-  CNY: "Chinese Renminbi Yuan",
-  CZK: "Czech Koruna",
-  DKK: "Danish Krone",
-  EUR: "Euro",
-  GBP: "British Pound",
-  HKD: "Hong Kong Dollar",
-  HUF: "Hungarian Forint",
-  IDR: "Indonesian Rupiah",
-  INR: "Indian Rupee",
-  ISK: "Icelandic Króna",
-  JPY: "Japanese Yen",
-  KRW: "South Korean Won",
-  MXN: "Mexican Peso",
-  MYR: "Malaysian Ringgit",
-  NOK: "Norwegian Krone",
-  NZD: "New Zealand Dollar",
-  PHP: "Philippine Peso",
-  PLN: "Polish Złoty",
-  RON: "Romanian Leu",
-  SEK: "Swedish Krona",
-  SGD: "Singapore Dollar",
-  THB: "Thai Baht",
-  TRY: "Turkish Lira",
-  USD: "United States Dollar",
-  ZAR: "South African Rand",
-};
-const PAIR_KEY = "coincompass-last-currency-pair";
 const PINS_KEY = "coincompass-pinned-currencies";
 const RECENTS_KEY = "coincompass-recent-currencies";
 const SYMBOLS: Record<CurrencyCode, string> = {
@@ -68,16 +36,6 @@ const SYMBOLS: Record<CurrencyCode, string> = {
   CNY: "¥",
   INR: "₹",
   KRW: "₩",
-};
-const getStoredArray = (key: string): CurrencyCode[] => {
-  try {
-    const value = JSON.parse(localStorage.getItem(key) ?? "[]");
-    return Array.isArray(value)
-      ? value.filter((item) => typeof item === "string")
-      : [];
-  } catch {
-    return [];
-  }
 };
 type DisplayMentalMethod = MentalMethod & { rate: number };
 const signedError = (method: DisplayMentalMethod) =>
@@ -124,14 +82,11 @@ function CurrencyPicker({
   );
   const priorityCurrencies = useMemo(
     () =>
-      [...new Set([...pinnedCurrencies, ...recentCurrencies])].flatMap(
-        (code) => {
-          const name = currencies[code];
-          return name &&
-            (!query || filterCurrencies({ [code]: name }, query).length)
-            ? ([[code, name]] as const)
-            : [];
-        },
+      getPriorityCurrencies(
+        currencies,
+        pinnedCurrencies,
+        recentCurrencies,
+        query,
       ),
     [currencies, pinnedCurrencies, query, recentCurrencies],
   );
@@ -357,8 +312,8 @@ function MethodCard({
 
 export const Route = createFileRoute("/")({
   validateSearch: (search: Record<string, unknown>) => ({
-    from: typeof search.from === "string" ? search.from.toUpperCase() : "EUR",
-    to: typeof search.to === "string" ? search.to.toUpperCase() : "PLN",
+    from: currencyCodeFromSearch(search.from, "EUR"),
+    to: currencyCodeFromSearch(search.to, "PLN"),
   }),
   component: App,
 });
@@ -366,42 +321,14 @@ export const Route = createFileRoute("/")({
 function App() {
   const { from: source, to: target } = Route.useSearch();
   const navigate = Route.useNavigate();
-  const [currencies, setCurrencies] = useState<CurrencyCatalog>(
-    mergeCurrencyCatalogs(FALLBACK_CURRENCIES),
-  );
-  const [pinnedCurrencies, setPinnedCurrencies] = useState(() =>
-    getStoredArray(PINS_KEY),
-  );
-  const [recentCurrencies, setRecentCurrencies] = useState(() =>
-    getStoredArray(RECENTS_KEY).slice(0, 5),
+  const currencies = useCurrencyCatalog();
+  const [pinnedCurrencies, setPinnedCurrencies] = useStoredCurrencies(PINS_KEY);
+  const [recentCurrencies, setRecentCurrencies] = useStoredCurrencies(
+    RECENTS_KEY,
+    5,
   );
   const [amountText, setAmountText] = useState("20");
-  const [rate, setRate] = useState<number | null>(null);
-  const [date, setDate] = useState("");
-  const [status, setStatus] = useState<RateStatus>("loading");
-  useEffect(() => {
-    fetch("https://api.frankfurter.dev/v2/currencies")
-      .then((response) => (response.ok ? response.json() : Promise.reject()))
-      .then((catalog: CurrencyApiResponse[]) =>
-        setCurrencies(mergeCurrencyCatalogs(toCurrencyCatalog(catalog))),
-      )
-      .catch(() => {});
-  }, []);
-  useEffect(() => {
-    try {
-      localStorage.setItem(PAIR_KEY, JSON.stringify({ source, target }));
-    } catch {}
-  }, [source, target]);
-  useEffect(() => {
-    try {
-      localStorage.setItem(PINS_KEY, JSON.stringify(pinnedCurrencies));
-    } catch {}
-  }, [pinnedCurrencies]);
-  useEffect(() => {
-    try {
-      localStorage.setItem(RECENTS_KEY, JSON.stringify(recentCurrencies));
-    } catch {}
-  }, [recentCurrencies]);
+  const { date, rate, status } = useExchangeRate(source, target);
   const selectCurrency =
     (key: "from" | "to") =>
     (currency: CurrencyCode): void => {
@@ -416,35 +343,7 @@ function App() {
         ? current.filter((item) => item !== currency)
         : [...current, currency],
     );
-  useEffect(() => {
-    if (source === target) {
-      setRate(1);
-      setStatus("ready");
-      setDate("Today");
-      return;
-    }
-    const cached = getCachedRate(localStorage, source, target);
-    if (cached) {
-      setRate(cached.rate);
-      setDate(cached.date);
-      setStatus("cached");
-    } else {
-      setRate(null);
-      setDate("");
-      setStatus("loading");
-    }
-    fetch(`https://api.frankfurter.dev/v2/rate/${source}/${target}`)
-      .then((response) => (response.ok ? response.json() : Promise.reject()))
-      .then((data: CachedRate) => {
-        saveCachedRate(localStorage, source, target, data);
-        setRate(data.rate);
-        setDate(data.date);
-        setStatus("ready");
-      })
-      .catch(() => {
-        if (!cached) setStatus("error");
-      });
-  }, [source, target]);
+
   const amount = Number(amountText) || 0;
   const methods = useMemo(
     () =>

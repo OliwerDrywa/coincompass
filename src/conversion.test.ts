@@ -2,12 +2,12 @@ import { readFileSync } from "node:fs";
 import type { StorageLike } from "./conversion.ts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  currencyPairFromSearch,
+  currencyCodeFromSearch,
   filterCurrencies,
   findMentalMethods,
   formatStep,
   getCachedRate,
-  mergeCurrencyCatalogs,
+  getPriorityCurrencies,
   normalizeAmountInput,
   rateIndicatorClass,
   saveCachedRate,
@@ -74,17 +74,15 @@ describe("mental conversion methods", () => {
     expect(normalizeAmountInput("0.5")).toBe("0.5");
   });
 
-  it("adds Taiwan and other requested Asian currencies to an API catalog", () => {
-    const currencies = mergeCurrencyCatalogs({
-      CNY: "Chinese Renminbi Yuan",
-      JPY: "Japanese Yen",
-    });
-    expect(currencies).toMatchObject({
-      CNY: "Chinese Renminbi Yuan",
-      JPY: "Japanese Yen",
-      TWD: "New Taiwan Dollar",
-      HKD: "Hong Kong Dollar",
-    });
+  it("relies on the currency API instead of bundled currency catalogs", () => {
+    const conversion = readFileSync(
+      new URL("./conversion.ts", import.meta.url),
+      "utf8",
+    );
+
+    expect(conversion).not.toContain("EXTRA_CURRENCIES");
+    expect(app).not.toContain("FALLBACK_CURRENCIES");
+    expect(app).not.toContain("mergeCurrencyCatalogs");
   });
 
   it("uses the v2 currency response, including Taiwan", () => {
@@ -96,19 +94,10 @@ describe("mental conversion methods", () => {
     ).toEqual({ TWD: "New Taiwan Dollar", JPY: "Japanese Yen" });
   });
 
-  it("uses valid URL currency params and falls back independently", () => {
-    expect(
-      currencyPairFromSearch(
-        { from: "usd", to: "jpy" },
-        { source: "EUR", target: "PLN" },
-      ),
-    ).toEqual({ source: "USD", target: "JPY" });
-    expect(
-      currencyPairFromSearch(
-        { from: "not-a-code", to: "CHF" },
-        { source: "EUR", target: "PLN" },
-      ),
-    ).toEqual({ source: "EUR", target: "CHF" });
+  it("normalizes valid URL currency codes and rejects invalid values", () => {
+    expect(currencyCodeFromSearch("usd", "EUR")).toBe("USD");
+    expect(currencyCodeFromSearch("not-a-code", "EUR")).toBe("EUR");
+    expect(currencyCodeFromSearch(undefined, "PLN")).toBe("PLN");
   });
 
   it("sorts currencies alphabetically by currency code", () => {
@@ -145,6 +134,28 @@ describe("mental conversion methods", () => {
     expect(
       updateRecentCurrencies(["EUR", "USD", "JPY", "GBP", "CHF"], "PLN"),
     ).toEqual(["PLN", "EUR", "USD", "JPY", "GBP"]);
+  });
+
+  it("builds a unique priority currency list from available pins and recents", () => {
+    expect(
+      getPriorityCurrencies(
+        { EUR: "Euro", USD: "United States Dollar", JPY: "Japanese Yen" },
+        ["USD", "GBP"],
+        ["EUR", "USD"],
+        "",
+      ),
+    ).toEqual([
+      ["USD", "United States Dollar"],
+      ["EUR", "Euro"],
+    ]);
+    expect(
+      getPriorityCurrencies(
+        { EUR: "Euro", USD: "United States Dollar" },
+        ["USD"],
+        ["EUR"],
+        "euro",
+      ),
+    ).toEqual([["EUR", "Euro"]]);
   });
 
   it("uses Tailwind utility classes and the Tailwind Prettier class sorter", () => {
@@ -263,15 +274,6 @@ describe("mental conversion methods", () => {
     expect(formatStep({ factor: 0.5 })).toBe("divide by 2");
     expect(formatStep({ factor: 2 })).toBe("multiply by 2");
     expect(formatStep({ factor: 1000 })).toBe("multiply by 1,000");
-  });
-
-  it("clears prior rate details before fetching an uncached currency pair", () => {
-    expect(app).toContain(`    } else {
-      setRate(null);
-      setDate("");
-      setStatus("loading");
-    }
-    fetch(\`https://api.frankfurter.dev/v2/rate/\${source}/\${target}\`)`);
   });
 
   it("returns a cached rate for the selected currency pair", () => {
