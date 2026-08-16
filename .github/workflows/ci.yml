@@ -24,6 +24,7 @@ jobs:
         with:
           name: node-modules-${{ github.sha }}
           path: node_modules
+          include-hidden-files: true
           retention-days: 1
 
   quality:
