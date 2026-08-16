@@ -7,7 +7,6 @@ import {
   findMentalMethods,
   formatStep,
   getCachedRate,
-  mergeCurrencyCatalogs,
   normalizeAmountInput,
   rateIndicatorClass,
   saveCachedRate,
@@ -74,17 +73,15 @@ describe("mental conversion methods", () => {
     expect(normalizeAmountInput("0.5")).toBe("0.5");
   });
 
-  it("adds Taiwan and other requested Asian currencies to an API catalog", () => {
-    const currencies = mergeCurrencyCatalogs({
-      CNY: "Chinese Renminbi Yuan",
-      JPY: "Japanese Yen",
-    });
-    expect(currencies).toMatchObject({
-      CNY: "Chinese Renminbi Yuan",
-      JPY: "Japanese Yen",
-      TWD: "New Taiwan Dollar",
-      HKD: "Hong Kong Dollar",
-    });
+  it("relies on the currency API instead of bundled currency catalogs", () => {
+    const conversion = readFileSync(
+      new URL("./conversion.ts", import.meta.url),
+      "utf8",
+    );
+
+    expect(conversion).not.toContain("EXTRA_CURRENCIES");
+    expect(app).not.toContain("FALLBACK_CURRENCIES");
+    expect(app).not.toContain("mergeCurrencyCatalogs");
   });
 
   it("uses the v2 currency response, including Taiwan", () => {

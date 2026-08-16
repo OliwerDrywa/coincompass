@@ -5,7 +5,6 @@ import {
   findMentalMethods,
   formatStep,
   getCachedRate,
-  mergeCurrencyCatalogs,
   normalizeAmountInput,
   rateIndicatorClass,
   saveCachedRate,
@@ -24,37 +23,6 @@ import type {
   RateStatus,
 } from "../conversion.ts";
 
-const FALLBACK_CURRENCIES: CurrencyCatalog = {
-  AUD: "Australian Dollar",
-  BRL: "Brazilian Real",
-  CAD: "Canadian Dollar",
-  CHF: "Swiss Franc",
-  CNY: "Chinese Renminbi Yuan",
-  CZK: "Czech Koruna",
-  DKK: "Danish Krone",
-  EUR: "Euro",
-  GBP: "British Pound",
-  HKD: "Hong Kong Dollar",
-  HUF: "Hungarian Forint",
-  IDR: "Indonesian Rupiah",
-  INR: "Indian Rupee",
-  ISK: "Icelandic Króna",
-  JPY: "Japanese Yen",
-  KRW: "South Korean Won",
-  MXN: "Mexican Peso",
-  MYR: "Malaysian Ringgit",
-  NOK: "Norwegian Krone",
-  NZD: "New Zealand Dollar",
-  PHP: "Philippine Peso",
-  PLN: "Polish Złoty",
-  RON: "Romanian Leu",
-  SEK: "Swedish Krona",
-  SGD: "Singapore Dollar",
-  THB: "Thai Baht",
-  TRY: "Turkish Lira",
-  USD: "United States Dollar",
-  ZAR: "South African Rand",
-};
 const PAIR_KEY = "coincompass-last-currency-pair";
 const PINS_KEY = "coincompass-pinned-currencies";
 const RECENTS_KEY = "coincompass-recent-currencies";
@@ -366,9 +334,7 @@ export const Route = createFileRoute("/")({
 function App() {
   const { from: source, to: target } = Route.useSearch();
   const navigate = Route.useNavigate();
-  const [currencies, setCurrencies] = useState<CurrencyCatalog>(
-    mergeCurrencyCatalogs(FALLBACK_CURRENCIES),
-  );
+  const [currencies, setCurrencies] = useState<CurrencyCatalog>({});
   const [pinnedCurrencies, setPinnedCurrencies] = useState(() =>
     getStoredArray(PINS_KEY),
   );
@@ -383,7 +349,7 @@ function App() {
     fetch("https://api.frankfurter.dev/v2/currencies")
       .then((response) => (response.ok ? response.json() : Promise.reject()))
       .then((catalog: CurrencyApiResponse[]) =>
-        setCurrencies(mergeCurrencyCatalogs(toCurrencyCatalog(catalog))),
+        setCurrencies(toCurrencyCatalog(catalog)),
       )
       .catch(() => {});
   }, []);
